@@ -18,6 +18,4 @@ enum token_kind {
     EQ, UEQ, Clt, Cle, Igt, Ige
 };
 
-char token_text[20];
-
 int gettoken(FILE *fp);

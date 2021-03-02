@@ -9,7 +9,7 @@
 
 char keyword[20][10] = {"int", "long", "float", "double", "char", "if", "else", "while", "for", "return", "break",
                         "continue",};
-
+char token_text[20];
 
 int is_Ox(char ch) {
     if (isdigit(ch) || (ch >= 'a' && ch <= 'f') || ((ch >= 'A' && ch <= 'F'))) return 1;
