@@ -15,7 +15,15 @@ enum token_kind {
     ERROR_TOKEN, IDENT, INT_CONST, LONG_CONST, FLOAT_CONST, CHAR_CONST,
     INT, LONG, FLOAT, DOUBLE, CHAR, IF, ELSE, WHILE, FOR, RETURN, BREAK, CONTINUE,
     ASSIGN, LP, RP, LSP, RSP, LCP, RCP, SEMI, COMMA, AndAnd, OrOr, PLUS, MINUS, MUTIPLY, DIVIDE, MOD,
-    EQ, UEQ, Clt, Cle, Igt, Ige
+    EQ, UEQ, Clt, Cle, Igt, Ige, Program, ExtDefList, ExtVarDef, FuncDef, VarList,
 };
+
+typedef struct node{
+    int type;
+    union {
+        struct node* children[3];
+        char text[20];
+    }val;
+}Node;
 
 int gettoken(FILE *fp);

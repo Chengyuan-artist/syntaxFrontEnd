@@ -10,6 +10,7 @@
 char keyword[20][10] = {"int", "long", "float", "double", "char", "if", "else", "while", "for", "return", "break",
                         "continue",};
 char token_text[20];
+int then_row = 0; // 当前行数
 
 int is_Ox(char ch) {
     if (isdigit(ch) || (ch >= 'a' && ch <= 'f') || ((ch >= 'A' && ch <= 'F'))) return 1;
@@ -36,9 +37,11 @@ int gettoken(FILE *fp) {
     int len = 0;
     char ch;
 
-    while ((ch = fgetc(fp)) == ' ') {
-        // TODO: 处理行数
-    }
+    do {
+        ch = getc(fp);
+        if (ch == '\n') ++then_row;
+    } while (ch == ' ' || ch == '\n');
+
     if (ch == EOF) return EOF;
 
     if (isalpha(ch)) { //如果ch是字母
@@ -254,7 +257,7 @@ int gettoken(FILE *fp) {
                     }
                     return ERROR_TOKEN;
                 }
-                if (ch == 'x'){
+                if (ch == 'x') {
                     do {
                         token_text[len++] = ch;
                         ch = getc(fp);

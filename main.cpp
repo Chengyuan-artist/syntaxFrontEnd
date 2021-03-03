@@ -1,5 +1,6 @@
 #include "syntax.h"
-
+#include <iostream>
+using namespace std;
 extern char token_text[20];
 
 int main() {
@@ -9,5 +10,6 @@ int main() {
         printf("%d\n", w);
         printf("%s\n", token_text);
     }
+
     return 0;
 }
