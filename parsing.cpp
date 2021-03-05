@@ -3,8 +3,9 @@
 //
 
 #include "syntax.h"
+
 #define CHECK_ERROR if(error)return nullptr;
-#define CATCH_ERROR error = 1;
+#define REPORT_ERROR_AND_RETURN error = 1;return nullptr;
 
 int error = 0;
 int error_type;
@@ -33,6 +34,18 @@ Node *formalParaList();
 
 Node *formalPara();
 
+Node *compoundSentenceList();
+
+Node *compoundSentence();
+
+Node *localVarDef();
+
+Node *statement();
+
+Node *varList_up();
+
+Node *expression();
+
 Node *program() {
     Node *root = (Node *) malloc(sizeof(Node));
     root->type = Program;
@@ -57,15 +70,13 @@ Node *extDefList() {
 
 Node *extDef() {
     if (token_type < INT || token_type > CHAR) {
-        CATCH_ERROR
-        return nullptr;
+        REPORT_ERROR_AND_RETURN
     }
     tmp_type = token_type;
 
     token_type = gettoken(fp);
     if (token_type != IDENT) {
-        CATCH_ERROR
-        return nullptr;
+        REPORT_ERROR_AND_RETURN
     }
 
     strcpy(tmp_token, token_text);
@@ -95,8 +106,7 @@ Node *varList() {
     CHECK_ERROR
     // 调用前以确保 tmp_token 存有var的变量名
     if (token_type != COMMA && token_type != SEMI) {
-        CATCH_ERROR
-        return nullptr;
+        REPORT_ERROR_AND_RETURN
     }
 
     Node *root = (Node *) malloc(sizeof(Node));
@@ -112,9 +122,9 @@ Node *varList() {
     if (token_type == COMMA) {
         token_type = gettoken(fp);
         if (token_type != IDENT) {
-            CATCH_ERROR
-            free(lc);free(root);
-            return nullptr;
+            free(lc);
+            free(root);
+            REPORT_ERROR_AND_RETURN
         }
         // 保存变量名
         strcpy(tmp_token, token_text);
@@ -130,7 +140,7 @@ Node *varList() {
     return nullptr;
 }
 
-
+// <函数定义>：：=<类型说明符> <函数名>（<形式参数序列>）{<复合语句序列>}  (可无)
 Node *funcDef() {
     CHECK_ERROR
     Node *root = (Node *) malloc(sizeof(Node));
@@ -143,11 +153,164 @@ Node *funcDef() {
     token_type = gettoken(fp);
     root->val.children[1] = formalParaList();
 
-    // TODO: func body part
+    token_type = gettoken(fp);
+    if (token_type == SEMI) {
+        root->val.children[2] = nullptr;
+        return root;
+    }
+    if (token_type != LCP) {
+        REPORT_ERROR_AND_RETURN
+    }
+    root->val.children[2] = compoundSentenceList();
+
+    return root;
+}
+
+// <复合语句序列> ::= <复合语句>  <复合语句序列>  |  <复合语句>
+Node *compoundSentenceList() {
+    CHECK_ERROR
+    token_type = gettoken(fp);
+    if (token_type == RCP) return nullptr;
+
+    Node *root = (Node *) malloc(sizeof(Node));
+    root->type = CompoundSentenceList;
+
+    root->val.children[0] = compoundSentence();
+    root->val.children[1] = compoundSentenceList();
+
+    return root;
+}
+
+// <复合语句> ::= <局部变量定义>  |  <语句>
+Node *compoundSentence() { // 需判断
+    CHECK_ERROR
+    token_type = gettoken(fp);
+    if (token_type >= INT && token_type <= CHAR) { // 是 <类型说明符>
+        return localVarDef();
+    } else {
+        // 做一次 token 缓存
+        tmp_type = token_type;
+        strcpy(tmp_token, token_text);
+        return statement();
+    }
+}
+
+/* <语句> ::= <表达式>; | return  <表达式>;
+ *         | {<复合语句序列>}
+           | if (<表达式>) <语句>
+		   | if (<表达式>) <语句> else <语句>
+           | while (<表达式>) <语句>
+           | continue; | break;
+           | <空>;
+*/
+Node *statement() {
+    // 调用此函数时，外部已经读入token
+    CHECK_ERROR
+    Node *root = (Node *) malloc(sizeof(Node));
+
+    // TODO: 指定 type ?
+    if (token_type >= IDENT && token_type <= CHAR_CONST) { // 表达式的必要条件
+
+        root->type = SingleExpStatement;
+        root->val.children[0] = expression();
+        if (token_type == SEMI)return root;
+        REPORT_ERROR_AND_RETURN
+    }
+
+    switch (token_type) {
+        case RETURN:
+            root->type = ReturnStatement;
+            token_type = gettoken(fp);
+            if (token_type >= IDENT && token_type <= CHAR_CONST) { // 表达式的必要条件
+                root->val.children[0] = expression();
+                // 跳出 expression() 时，token已经读取
+                if (token_type == SEMI) {
+                    return root;
+                }
+                REPORT_ERROR_AND_RETURN
+            }
+            // 非表达式
+            REPORT_ERROR_AND_RETURN
+            break;
+        case IF:// 需判断为if或if-else句式
+            token_type = gettoken(fp);
+            if (token_type != LP) {
+                REPORT_ERROR_AND_RETURN
+            }
+            token_type = gettoken(fp);
+            if (token_type >= IDENT && token_type <= CHAR_CONST) { // 表达式的必要条件
+
+            }
+
+            break;
+        default:
+        REPORT_ERROR_AND_RETURN
+    }
+    return nullptr;
 
 
+}
+
+/*
+ * <表达式> ::= <表达式> + <表达式>  |  <表达式> - <表达式> |<表达式> * <表达式>
+              |<表达式> / <表达式>  | INT_CONST | IDENT | IDENT(<实参序列>)
+			  |<表达式> == <表达式> |<表达式> != <表达式> |<表达式> > <表达式>
+			  |<表达式>  > <表达式> |<表达式> >= <表达式> |<表达式>  <  <表达式>
+			  |<表达式>  <=  <表达式>  | 标识符 = <表达式>
+
+ */
+// 表达式有两种结尾方法 一种以;结尾,一种以)结尾
+Node *expression() {
+    // 调用前以确保读取的第一个token为表达式必要条件
     return nullptr;
 }
+
+
+// <局部变量定义> ::= <类型说明符> <变量序列>;
+Node *localVarDef() {
+    // 函数进入前提: token_type 为 <类型说明符>
+    CHECK_ERROR
+    Node *root = (Node *) malloc(sizeof(Node));
+    root->type = LocalVarDef;
+    root->val.children[0] = (Node *) malloc(sizeof(Node));
+    root->val.children[0]->type = token_type;
+
+    // 开始也交由 varList()判断
+    root->val.children[1] = varList_up(); // 意为读取判断控制权交由 varList()
+    // 结束交由 varList()判断
+    return root;
+}
+
+// <变量序列> ::= <变量> , <变量序列>  |  <变量>
+Node *varList_up() {
+    CHECK_ERROR
+    token_type = gettoken(fp);
+    if (token_type != IDENT) {
+        REPORT_ERROR_AND_RETURN
+        return nullptr;
+    }
+    Node *root = (Node *) malloc(sizeof(Node));
+    root->type = VarList;
+    Node *lc = (Node *) malloc(sizeof(Node));
+    lc->type = IDENT;
+    strcpy(lc->val.text, token_text);
+    root->val.children[0] = lc;
+
+    // 判断是否应当结束
+    token_type = gettoken(fp);
+    if (token_type == SEMI) { // ;
+        root->val.children[2] = nullptr;
+        return root;
+    }
+    if (token_type == COMMA) { // ,
+        root->val.children[2] = varList_up();
+        return root;
+    }
+    // 非 ; 或 ,
+    REPORT_ERROR_AND_RETURN
+    return nullptr;
+}
+
 
 Node *formalParaList() {
     CHECK_ERROR
@@ -155,7 +318,7 @@ Node *formalParaList() {
         return nullptr;
     }
     if (token_type < INT || token_type > CHAR) {
-        CATCH_ERROR
+        REPORT_ERROR_AND_RETURN
         return nullptr;
     }
 
@@ -168,13 +331,13 @@ Node *formalParaList() {
     if (token_type == COMMA) {
         token_type = gettoken(fp);
         if (token_type < INT || token_type > CHAR) { // 确保 etc. int func(int a,) 不合法
-            CATCH_ERROR
+            REPORT_ERROR_AND_RETURN
             return nullptr;
         }
         root->val.children[1] = formalParaList();
         return root;
     }
-    if (token_type == LP){
+    if (token_type == LP) {
         root->val.children[1] = nullptr;
         return root;
     }
@@ -189,8 +352,7 @@ Node *formalPara() {
 
     token_type = gettoken(fp);
     if (token_type != IDENT) {
-        CATCH_ERROR
-        return nullptr;
+        REPORT_ERROR_AND_RETURN
     }
     Node *root = (Node *) malloc(sizeof(Node));
     root->type = FormalPara;

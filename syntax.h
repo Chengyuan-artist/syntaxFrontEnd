@@ -15,7 +15,9 @@ enum token_kind {
     ERROR_TOKEN, IDENT, INT_CONST, LONG_CONST, FLOAT_CONST, CHAR_CONST,
     INT, LONG, FLOAT, DOUBLE, CHAR, IF, ELSE, WHILE, FOR, RETURN, BREAK, CONTINUE,
     ASSIGN, LP, RP, LSP, RSP, LCP, RCP, SEMI, COMMA, AndAnd, OrOr, PLUS, MINUS, MUTIPLY, DIVIDE, MOD,
-    EQ, UEQ, Clt, Cle, Igt, Ige, Program, ExtDefList, ExtVarDef, FuncDef, VarList, FormalParaList, FormalPara
+    EQ, UEQ, Clt, Cle, Igt, Ige, Program, ExtDefList, ExtVarDef, FuncDef, VarList, FormalParaList, FormalPara,
+    CompoundSentenceList, LocalVarDef,
+    SingleExpStatement,ReturnStatement , IfStatement, IfElseStatement
 };
 
 typedef struct node{
