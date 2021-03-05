@@ -47,7 +47,7 @@ Node *varList_up();
 Node *expression();
 
 Node *program() {
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = Program;
 
     token_type = gettoken(fp);
@@ -61,7 +61,7 @@ Node *program() {
 Node *extDefList() {
     if (token_type == EOF) return nullptr;
 
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = ExtDefList;
     root->val.children[0] = extDef();
     root->val.children[1] = extDefList();
@@ -91,10 +91,10 @@ Node *extDef() {
 
 Node *extVarDef() {
     CHECK_ERROR
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = ExtVarDef;
 
-    root->val.children[0] = (Node *) malloc(sizeof(Node));
+    root->val.children[0] = getNode();
     root->val.children[0]->type = tmp_type;
 
     root->val.children[1] = varList();
@@ -109,11 +109,11 @@ Node *varList() {
         REPORT_ERROR_AND_RETURN
     }
 
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = VarList;
 
     // 左孩子
-    Node *lc = (Node *) malloc(sizeof(Node));
+    Node *lc = getNode();
     lc->type = IDENT;
     strcpy(lc->val.text, tmp_token);
     root->val.children[0] = lc;
@@ -143,10 +143,10 @@ Node *varList() {
 // <函数定义>：：=<类型说明符> <函数名>（<形式参数序列>）{<复合语句序列>}  (可无)
 Node *funcDef() {
     CHECK_ERROR
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = FuncDef;
 
-    Node *type = (Node *) malloc(sizeof(Node));
+    Node *type = getNode();
     type->type = tmp_type;
     root->val.children[0] = type;
 
@@ -161,6 +161,8 @@ Node *funcDef() {
     if (token_type != LCP) {
         REPORT_ERROR_AND_RETURN
     }
+    // token_type == {
+    token_type = gettoken(fp);
     root->val.children[2] = compoundSentenceList();
 
     return root;
@@ -169,10 +171,9 @@ Node *funcDef() {
 // <复合语句序列> ::= <复合语句>  <复合语句序列>  |  <复合语句>
 Node *compoundSentenceList() {
     CHECK_ERROR
-    token_type = gettoken(fp);
     if (token_type == RCP) return nullptr;
 
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = CompoundSentenceList;
 
     root->val.children[0] = compoundSentence();
@@ -184,11 +185,10 @@ Node *compoundSentenceList() {
 // <复合语句> ::= <局部变量定义>  |  <语句>
 Node *compoundSentence() { // 需判断
     CHECK_ERROR
-    token_type = gettoken(fp);
     if (token_type >= INT && token_type <= CHAR) { // 是 <类型说明符>
         return localVarDef();
     } else {
-        // 做一次 token 缓存
+        // 做一次 token 缓存 ---不需要?
         tmp_type = token_type;
         strcpy(tmp_token, token_text);
         return statement();
@@ -205,12 +205,14 @@ Node *compoundSentence() { // 需判断
 */
 Node *statement() {
     // 调用此函数时，外部已经读入token
+    // 结束时并多读token
     CHECK_ERROR
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root ;
 
     // TODO: 指定 type ?
     if (token_type >= IDENT && token_type <= CHAR_CONST) { // 表达式的必要条件
 
+        root = getNode();
         root->type = SingleExpStatement;
         root->val.children[0] = expression();
         if (token_type == SEMI)return root;
@@ -219,6 +221,7 @@ Node *statement() {
 
     switch (token_type) {
         case RETURN:
+            root = getNode();
             root->type = ReturnStatement;
             token_type = gettoken(fp);
             if (token_type >= IDENT && token_type <= CHAR_CONST) { // 表达式的必要条件
@@ -239,16 +242,39 @@ Node *statement() {
             }
             token_type = gettoken(fp);
             if (token_type >= IDENT && token_type <= CHAR_CONST) { // 表达式的必要条件
+                root = getNode();
+                root->val.children[0] = expression();
 
+                if (token_type != RP) {
+                    REPORT_ERROR_AND_RETURN
+                }
+                token_type = gettoken(fp);
+                root->val.children[1] = statement(); // 递归调用
+
+                token_type = gettoken(fp);
+                if (token_type == ELSE) {
+                    root->type = IfElseStatement;
+
+                    token_type = gettoken(fp);
+                    root->val.children[2] = statement();
+
+                    token_type = gettoken(fp); //多读一步token
+                } else {
+                    root->type = IfStatement;
+                }
+                return root;
             }
-
+            REPORT_ERROR_AND_RETURN
             break;
+        case LCP: // {<复合语句序列>}
+            token_type = gettoken(fp);
+            root = compoundSentenceList();
+            return root;
+
         default:
-        REPORT_ERROR_AND_RETURN
+            REPORT_ERROR_AND_RETURN
     }
     return nullptr;
-
-
 }
 
 /*
@@ -261,7 +287,12 @@ Node *statement() {
  */
 // 表达式有两种结尾方法 一种以;结尾,一种以)结尾
 Node *expression() {
-    // 调用前以确保读取的第一个token为表达式必要条件
+    // 调用前以确保读取的第一个token为表达式必要条件---不需要?
+    // 以 ; 或 ) 判断结束
+    if (!(token_type >= IDENT && token_type <= CHAR_CONST) ){ // 表达式的必要条件不满足
+        REPORT_ERROR_AND_RETURN
+    }
+
     return nullptr;
 }
 
@@ -270,9 +301,9 @@ Node *expression() {
 Node *localVarDef() {
     // 函数进入前提: token_type 为 <类型说明符>
     CHECK_ERROR
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = LocalVarDef;
-    root->val.children[0] = (Node *) malloc(sizeof(Node));
+    root->val.children[0] = getNode();
     root->val.children[0]->type = token_type;
 
     // 开始也交由 varList()判断
@@ -289,9 +320,9 @@ Node *varList_up() {
         REPORT_ERROR_AND_RETURN
         return nullptr;
     }
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = VarList;
-    Node *lc = (Node *) malloc(sizeof(Node));
+    Node *lc = getNode();
     lc->type = IDENT;
     strcpy(lc->val.text, token_text);
     root->val.children[0] = lc;
@@ -319,10 +350,9 @@ Node *formalParaList() {
     }
     if (token_type < INT || token_type > CHAR) {
         REPORT_ERROR_AND_RETURN
-        return nullptr;
     }
 
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = FormalParaList;
 
     root->val.children[0] = formalPara();
@@ -332,7 +362,6 @@ Node *formalParaList() {
         token_type = gettoken(fp);
         if (token_type < INT || token_type > CHAR) { // 确保 etc. int func(int a,) 不合法
             REPORT_ERROR_AND_RETURN
-            return nullptr;
         }
         root->val.children[1] = formalParaList();
         return root;
@@ -354,12 +383,12 @@ Node *formalPara() {
     if (token_type != IDENT) {
         REPORT_ERROR_AND_RETURN
     }
-    Node *root = (Node *) malloc(sizeof(Node));
+    Node *root = getNode();
     root->type = FormalPara;
 
-    Node *lc = (Node *) malloc(sizeof(Node));
+    Node *lc = getNode();
     lc->type = tmp_type;
-    Node *rc = (Node *) malloc(sizeof(Node));
+    Node *rc = getNode();
     rc->type = IDENT;
     strcpy(rc->val.text, token_text);
 
