@@ -3,6 +3,7 @@
 //
 
 #include "syntax.h"
+#include <stack>
 
 #define CHECK_ERROR if(error)return nullptr;
 #define REPORT_ERROR_AND_RETURN error = 1;return nullptr;
@@ -45,6 +46,8 @@ Node *statement();
 Node *varList_up();
 
 Node *expression();
+
+int precede(int type, int type1);
 
 Node *program() {
     Node *root = getNode();
@@ -149,6 +152,8 @@ Node *funcDef() {
     Node *type = getNode();
     type->type = tmp_type;
     root->val.children[0] = type;
+
+    // TODO: 函数名称未保存
 
     token_type = gettoken(fp);
     root->val.children[1] = formalParaList();
@@ -270,7 +275,6 @@ Node *statement() {
             token_type = gettoken(fp);
             root = compoundSentenceList();
             return root;
-
         default:
             REPORT_ERROR_AND_RETURN
     }
@@ -289,11 +293,95 @@ Node *statement() {
 Node *expression() {
     // 调用前以确保读取的第一个token为表达式必要条件---不需要?
     // 以 ; 或 ) 判断结束
-    if (!(token_type >= IDENT && token_type <= CHAR_CONST) ){ // 表达式的必要条件不满足
+    // 表达式有三种类型的单体
+    // 常量 变量 函数调用  etc. 12.3 + a + func(5, b);
+    if (!(token_type >= IDENT && token_type <= CHAR_CONST)) { // 表达式的必要条件不满足
         REPORT_ERROR_AND_RETURN
     }
 
-    return nullptr;
+    // TODO: 先不考虑 fuc(5,b)
+    // 非递归，而是设栈
+    std::stack<Node *> opt;
+    std::stack<Node *> opn;
+
+    Node *end_mark = getNode();
+    end_mark->type = Begin_End;
+
+    opt.push(end_mark);
+
+    while ((token_type != Begin_End) && !error) {
+
+        if (token_type >= IDENT && token_type <= CHAR_CONST) { // 如果token是操作数
+            // TODO: 函数调用形式
+            Node *num = getNode();
+            num->type = token_type;
+            strcpy(num->val.text, token_text);
+
+            opn.push(num);
+        } else {
+            if (token_type >= ASSIGN && token_type <= Ige) { // token是运算符
+                Node *then_opt = getNode();
+                then_opt->type = token_type;
+
+                Node *last_opt = opt.top();
+                switch (precede(last_opt->type, token_type)) {
+                    case -1:
+                        opt.push(then_opt);
+                        token_type = gettoken(fp);
+                        break;
+                    case 0:
+                        opt.pop();
+                        if (opn.empty()) {
+                            error = 1;
+                            break;
+                        } else {
+                            Node *opn_bracket = getNode();
+                            opn_bracket->type = Brackets;
+                            opn_bracket->val.children[0] = opn.top();
+
+                            opn.pop();
+                            opn.push(opn_bracket);
+                            token_type = gettoken(fp);
+                        }
+                        break;
+                    case 1:
+                        if (opn.size() < 2) {
+                            error = 1;
+                            break;
+                        } else {
+                            Node *right_opn = opn.top();
+                            opn.pop();
+                            Node *left_opn = opn.top();
+                            opn.pop();
+
+                            opt.pop();
+                            last_opt->val.children[0] = left_opn;
+                            last_opt->val.children[1] = right_opn;
+
+                            opn.push(last_opt);
+                        }
+                    default:
+                        if (token_type == SEMI || token_type == RP) token_type = Begin_End;
+                        else error = 1;
+                }
+            } else {
+                if (token_type == SEMI || token_type == RP) token_type = Begin_End;
+                else error = 1;
+            }
+
+        }
+    }
+
+    if (!error && opn.size() == 1 && opt.top()->type == Begin_End && opt.size() == 1) {
+        // 运算符和操作数相匹配
+        return opn.top();
+    } else {
+        return nullptr;
+    }
+}
+
+int precede(int type, int type1) {
+
 }
 
 
