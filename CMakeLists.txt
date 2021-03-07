@@ -3,4 +3,4 @@ project(syntaxFrontEnd)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(syntaxFrontEnd main.cpp lexical.cpp parsing.cpp syntax.h)
+add_executable(syntaxFrontEnd main.cpp lexical.cpp parsing.cpp syntax.hpp parsing.hpp lexical.hpp)

@@ -1,15 +1,12 @@
-#include "syntax.h"
+#include "syntax.hpp"
 #include <iostream>
 using namespace std;
 extern char token_text[20];
-
+extern int op_precede_sheet[10][10];
 int main() {
     FILE *in = fopen("test.in", "r");
-    int w;
-    while ((w=gettoken(in)) != EOF) {
-        printf("%d\n", w);
-        printf("%s\n", token_text);
-    }
+
+    int a = precede(RP, Begin_End);
 
     return 0;
 }

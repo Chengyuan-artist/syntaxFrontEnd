@@ -2,7 +2,7 @@
 // Created by 张承元 on 2021/3/2.
 //
 
-#include "syntax.h"
+#include "syntax.hpp"
 #include <stack>
 
 #define CHECK_ERROR if(error)return nullptr;
@@ -15,11 +15,26 @@ extern char token_text[20];
 extern int then_row; // 当前行数
 
 FILE *fp;// init in main
-int token_type; //value from gettoken
+token_kind token_type; //value from gettoken
 
 // tmp var to save the last res form gettoken
-int tmp_type;
+token_kind tmp_type;
 char tmp_token[20];
+
+#define OUT -2
+int op_precede_sheet[10][10] =
+        {
+                {1,  -1, 1,     OUT, 1,  1,  1,  1,  1,     1,},
+                {1,  1,  1,     OUT, 1,  1,  1,  1,  1,     1,},
+                {1,  1,  1,     OUT, 1,  1,  1,  1,  1,     1,},
+                {-1, -1, 0,     OUT, -1, -1, -1, -1, -1, OUT,},
+                {OUT, OUT, OUT, OUT, 1, OUT, OUT, OUT, OUT, 1,},
+                {-1, -1, 1,     OUT, 1,  1,  1,  1,  1,     1,},
+                {-1, -1, 1,     OUT, 1,  -1, 1,  1,  1,     1,},
+                {-1, -1, 1,     OUT, 1,  -1, -1, 1,  1,     1,},
+                {-1, -1, 1,     OUT, 1,  -1, -1, -1, 1,     1,},
+                {-1, -1, -1,    OUT, -1, -1, -1, -1, -1,    0}
+        };
 
 Node *extDefList();
 
@@ -47,9 +62,43 @@ Node *varList_up();
 
 Node *expression();
 
-int precede(int type, int type1);
+Node *getNode() {
+    Node *root = (Node *) malloc(sizeof(Node));
+    root->type = NoType;
+    for (int i = 0; i < 4; ++i) {
+        root->val.children[i] = nullptr;
+    }
+    return root;
+}
 
-Node *program() {
+
+int precede(int op, int last_op);
+
+void visit(Node *root);
+
+void visit(Node *root) { // 递归写法
+
+    // TODO: unfinished
+    switch (root->type) {
+        case Program:
+            printf("Program:\n");
+            break;
+        case ExtDefList:
+            break;
+        case ExtVarDef:
+            printf("\tExtVarDef:\n");
+            break;
+        case FuncDef:
+            printf("\tFuncDef:\n");
+            break;
+
+    }
+
+}
+
+Node *program(FILE *in) {
+    fp = in;
+
     Node *root = getNode();
     root->type = Program;
 
@@ -62,11 +111,14 @@ Node *program() {
 }
 
 Node *extDefList() {
-    if (token_type == EOF) return nullptr;
+    CHECK_ERROR
+    if (token_type == Eof) return nullptr;
 
     Node *root = getNode();
     root->type = ExtDefList;
     root->val.children[0] = extDef();
+
+    token_type = gettoken(fp);
     root->val.children[1] = extDefList();
     return root;
 }
@@ -153,14 +205,17 @@ Node *funcDef() {
     type->type = tmp_type;
     root->val.children[0] = type;
 
-    // TODO: 函数名称未保存
+    Node *name = getNode();
+    name->type = IDENT;
+    strcpy(name->val.text, token_text);
+    root->val.children[1] = name;
 
     token_type = gettoken(fp);
-    root->val.children[1] = formalParaList();
+    root->val.children[2] = formalParaList();
 
     token_type = gettoken(fp);
     if (token_type == SEMI) {
-        root->val.children[2] = nullptr;
+        root->val.children[3] = nullptr;
         return root;
     }
     if (token_type != LCP) {
@@ -168,7 +223,7 @@ Node *funcDef() {
     }
     // token_type == {
     token_type = gettoken(fp);
-    root->val.children[2] = compoundSentenceList();
+    root->val.children[3] = compoundSentenceList();
 
     return root;
 }
@@ -318,14 +373,16 @@ Node *expression() {
             strcpy(num->val.text, token_text);
 
             opn.push(num);
+
+            token_type = gettoken(fp);
         } else {
             if (token_type >= ASSIGN && token_type <= Ige) { // token是运算符
                 Node *then_opt = getNode();
                 then_opt->type = token_type;
 
                 Node *last_opt = opt.top();
-                switch (precede(last_opt->type, token_type)) {
-                    case -1:
+                switch (precede(token_type, last_opt->type)) {
+                    case 1:
                         opt.push(then_opt);
                         token_type = gettoken(fp);
                         break;
@@ -344,7 +401,7 @@ Node *expression() {
                             token_type = gettoken(fp);
                         }
                         break;
-                    case 1:
+                    case -1:
                         if (opn.size() < 2) {
                             error = 1;
                             break;
@@ -360,12 +417,13 @@ Node *expression() {
 
                             opn.push(last_opt);
                         }
+                        break;
                     default:
-                        if (token_type == SEMI || token_type == RP) token_type = Begin_End;
+                        if (token_type == SEMI || token_type == RP) break;
                         else error = 1;
                 }
             } else {
-                if (token_type == SEMI || token_type == RP) token_type = Begin_End;
+                if (token_type == SEMI || token_type == RP) break;
                 else error = 1;
             }
 
@@ -380,8 +438,32 @@ Node *expression() {
     }
 }
 
-int precede(int type, int type1) {
 
+int op_priority(int stdType) {
+    int a = stdType;
+    if (a == PLUS || a == MINUS) return 0;
+    if (a == MULTIPLY || a == DIVIDE) return 1;
+    if (a == LP) return 2;
+    if (a == RP) return 3;
+    if (a == ASSIGN) return 4;
+    if (a == Igt || a == Ige || a == Clt || a == Cle) return 5;
+    if (a == EQ || a == UEQ) return 6;
+    if (a == AndAnd) return 7;
+    if (a == OrOr) return 8;
+    if (a == Begin_End) return 9;
+
+    error = 1;
+    return -1;
+}
+
+int precede(int op, int last_op) {
+    int _op_p = op_priority(op);
+    int _last_op_p = op_priority(last_op);
+    if (_op_p != -1 && _last_op_p != -1) {
+        return op_precede_sheet[_op_p][_last_op_p];
+    }
+    error = 1;
+    return OUT;
 }
 
 

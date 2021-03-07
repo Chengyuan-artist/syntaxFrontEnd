@@ -2,7 +2,7 @@
 // Created by 张承元 on 2021/3/2.
 //
 
-#include "syntax.h"
+#include "syntax.hpp"
 
 
 #define keyword_num 12
@@ -17,22 +17,22 @@ int is_Ox(char ch) {
     return 0;
 }
 
-int check_keyword() {
+token_kind check_keyword() {
     // 查找表查找关键字 否则返回 IDENT
     for (int i = 0; i < keyword_num; ++i) {
         if (strcmp(token_text, keyword[i]) == 0)
-            return INT + i;
+            return token_kind(INT + i);
     }
     return IDENT;
 }
 
-int const_suffix(char ch) {
+token_kind const_suffix(char ch) {
     if (ch == 'l' || ch == 'L') return LONG_CONST;
     if (ch == 'f' || ch == 'F') return FLOAT_CONST;
     return ERROR_TOKEN;
 }
 
-int gettoken(FILE *fp) {
+token_kind gettoken(FILE *fp) {
 
     int len = 0;
     char ch;
@@ -42,7 +42,7 @@ int gettoken(FILE *fp) {
         if (ch == '\n') ++then_row;
     } while (ch == ' ' || ch == '\n');
 
-    if (ch == EOF) return EOF;
+    if (ch == EOF) return Eof;
 
     if (isalpha(ch)) { //如果ch是字母
         do {
@@ -188,7 +188,7 @@ int gettoken(FILE *fp) {
             return MINUS;
             // TODO 负数处理
         case '*':
-            return MUTIPLY;
+            return MULTIPLY;
         case '/':
             return DIVIDE;
         case '%':
@@ -284,6 +284,6 @@ int gettoken(FILE *fp) {
         default:
             return ERROR_TOKEN;
     }
-    return 0;
+    return ERROR_TOKEN;
 }
 
