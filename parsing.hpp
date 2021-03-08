@@ -1,9 +1,0 @@
-//
-// Created by 张承元 on 2021/3/7.
-//
-
-#ifndef SYNTAXFRONTEND_PARSING_HPP
-#define SYNTAXFRONTEND_PARSING_HPP
-
-#endif //SYNTAXFRONTEND_PARSING_HPP
-
