@@ -70,7 +70,7 @@ Node *extVarDef(Parser *parser) {
 
     AddChild(root, type_id);
 
-    AddChild(root, varList(parser));
+    AddChild(root, declaratorList(parser));
 
     return root;
 }
@@ -116,7 +116,7 @@ Node *funcDef(Parser *parser) {
     return root;
 }
 
-Node *varList(Parser *parser) {
+Node *declaratorList(Parser *parser) {
 
     Token *token = CurrentToken(parser->token_list);
 
@@ -142,7 +142,7 @@ Node *varList(Parser *parser) {
         }
 
         NextToken(parser->token_list);
-        AddChild(root, varList(parser)); // 递归调用
+        AddChild(root, declaratorList(parser)); // 递归调用
         return root;
     }
     if (token->type == SEMI) {
@@ -267,7 +267,7 @@ Node *localVarDef(Parser *parser) {
     }
     NextToken(parser->token_list);
 
-    AddChild(root, varList(parser));
+    AddChild(root, declaratorList(parser));
 
     return root;
 }

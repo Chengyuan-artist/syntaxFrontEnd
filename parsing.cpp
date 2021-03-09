@@ -476,9 +476,9 @@ Node *localVarDef() {
     root->val.children[0] = getNode();
     root->val.children[0]->type = token_type;
 
-    // 开始也交由 varList()判断
-    root->val.children[1] = varList_up(); // 意为读取判断控制权交由 varList()
-    // 结束交由 varList()判断
+    // 开始也交由 declaratorList()判断
+    root->val.children[1] = varList_up(); // 意为读取判断控制权交由 declaratorList()
+    // 结束交由 declaratorList()判断
     return root;
 }
 

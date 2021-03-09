@@ -33,7 +33,7 @@ Node *extVarDef(Parser *parser);
 
 Node *funcDef(Parser *parser);
 
-Node *varList(Parser *parser);
+Node *declaratorList(Parser *parser);
 
 Node *formalParaList(Parser *parser);
 

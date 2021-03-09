@@ -7,11 +7,11 @@
                 | &lt;ExtDefList&gt;
 
 
-&lt;ExtDef&gt; ::=  &lt;ExtDefList&gt; 
+&lt;ExtDef&gt; ::=  &lt;ExtVarDef&gt; 
             | &lt;FuncDef&gt;
 
 
-&lt;ExtDefList&gt; ::= &lt;TypeSpecifier&gt; &lt;DeclaratorList&gt;
+&lt;ExtVarDef&gt; ::= &lt;TypeSpecifier&gt; &lt;DeclaratorList&gt;
 
 
 &lt;TypeSpecifier&gt; ::= int 
