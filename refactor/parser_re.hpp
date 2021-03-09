@@ -14,39 +14,40 @@ typedef struct Parser{
     TokenList *token_list;
     Node *root;
 
+    int error;
     enum ErrorType{
 
     }error_type;
 
 }Parser;
 
-void lexicalAnalyse(Parser parser,FILE *in);
+void lexicalAnalyse(Parser *parser, FILE *in);
 
-Node *program(Parser parser);
+Node *program(Parser *parser);
 
-Node *extDefList(Parser parser);
+Node *extDefList(Parser *parser);
 
-Node *extDef(Parser parser);
+Node *extDef(Parser *parser);
 
-Node *extVarDef(Parser parser);
+Node *extVarDef(Parser *parser);
 
-Node *funcDef(Parser parser);
+Node *funcDef(Parser *parser);
 
-Node *varList(Parser parser);
+Node *varList(Parser *parser);
 
-Node *formalParaList(Parser parser);
+Node *formalParaList(Parser *parser);
 
-Node *formalPara(Parser parser);
+Node *formalPara(Parser *parser);
 
-Node *compoundSentenceList(Parser parser);
+Node *compoundSentenceList(Parser *parser);
 
-Node *compoundSentence(Parser parser);
+Node *compoundSentence(Parser *parser);
 
-Node *localVarDef(Parser parser);
+Node *localVarDef(Parser *parser);
 
-Node *statement(Parser parser);
+Node *statement(Parser *parser);
 
-Node *expression(Parser parser);
+Node *expression(Parser *parser);
 
 #endif //SYNTAXFRONTEND_PARSER_HPP
 
