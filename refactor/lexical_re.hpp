@@ -29,34 +29,33 @@ typedef struct Token {
     char text[Token_Text_Max_Len];
 } Token;
 
-typedef struct TokenListNode {
-    Token *token;
-    struct TokenListNode *next;
-} TokenListNode;
 
-TokenListNode *getTokenListNode();
-
-
+#define Init_TokenList_Length 50
+#define Add_TokenList_Length 20
 typedef struct TokenList {
-    TokenListNode *head;
-    TokenListNode *tail;
-    TokenListNode *then_p;
+   Token * *val;
+   int len;
+   int store_size;
+   int then_p;
 } TokenList;
 
-TokenList* getTokenList(
-        TokenListNode *head,
-        TokenListNode *tail);
+TokenList* getTokenList();
+
+void AddToken(TokenList *token_list, Token *token);
 
 // Public
-Token *GetToken(FILE *in);
+Token* GetToken(FILE *in);
 
 // Public
-TokenList *GetTokenList(FILE *in);
+TokenList* GetTokenList(FILE *in);
 
 // Public
 Token *NextToken(TokenList *list);
 
 Token *CurrentToken(TokenList *list);
+
+// 得到与then_p相对位置为index的token指针
+Token *TokenAt(TokenList *list, int index);
 
 
 int is_Ox(char ch);

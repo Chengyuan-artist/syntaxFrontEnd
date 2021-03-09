@@ -11,6 +11,10 @@
 int main(){
     FILE *in = fopen("test.in", "r");
     TokenList *tokenList = GetTokenList(in);
-
+    Token  *token = CurrentToken(tokenList);
+    while (token != nullptr){
+        std::cout<<token->type<<std::endl;
+        token = NextToken(tokenList);
+    }
     return 0;
 }

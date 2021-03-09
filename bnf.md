@@ -1,2 +1,3 @@
 Program ::= ExtDefList
-ExtDefList ::= 
+ExtDefList ::= ExtDef ExtDefList | ExtDefList
+

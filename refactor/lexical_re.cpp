@@ -64,23 +64,16 @@ Token *GetToken(FILE *fp) {
 }
 
 TokenList *GetTokenList(FILE *in) {
-    // head为头结点 不含token
-    TokenListNode *head = getTokenListNode();
-
-    TokenListNode *tail = head;
+    TokenList *tokenList = getTokenList();
 
     Token *token = GetToken(in);
     while (token->type != Eof) {
-        tail->next = getTokenListNode();
-        tail = tail->next;
-
-        tail->token = token;
+        AddToken(tokenList, token);
         token = GetToken(in);
     }
-    tail->next = nullptr;
 
-    TokenList *list = getTokenList(head, tail);
-    return list;
+    tokenList->then_p = 0;
+    return tokenList;
 }
 
 //token_text
@@ -340,29 +333,38 @@ TokenType gettoken(FILE *fp) {
     return ERROR_TOKEN;
 }
 
-TokenListNode *getTokenListNode() {
-    TokenListNode *tokenListNode = (TokenListNode *) malloc(sizeof(TokenListNode));
-    memset(tokenListNode, 0, sizeof(TokenListNode));
-    return tokenListNode;
-}
-
 Token *NextToken(TokenList *list) {
-    list->then_p = list->then_p->next;
-    return list->then_p ? list->then_p->token : nullptr;
-}
-
-TokenList *getTokenList(TokenListNode *head, TokenListNode *tail) {
-
-    TokenList *list = (TokenList *) malloc(sizeof(TokenList));
-    list->head = head;
-    list->tail = tail;
-    list->then_p = head;
-    return list;
-
+    list->then_p++;
+    return list->then_p < list->len ? list->val[list->then_p] : nullptr;
 }
 
 Token *CurrentToken(TokenList *list) {
-    return list->then_p ? list->then_p->token : nullptr;
+    return list->then_p < list->len ? list->val[list->then_p] : nullptr;
 }
 
+void AddToken(TokenList *token_list, Token *token) {
+    if (token_list->len >= token_list->store_size) {
+        token_list->store_size += Add_TokenList_Length;
+
+        token_list->val = (Token **) realloc(token_list->val,
+                                             sizeof(Token *) * (token_list->store_size));
+    }
+    token_list->val[token_list->len++] = token;
+}
+
+TokenList *getTokenList() {
+    TokenList *token_list = (TokenList *) malloc(sizeof(TokenList));
+    token_list->val = (Token **) malloc(sizeof(Token *) * Init_TokenList_Length);
+    token_list->len = 0;
+    token_list->store_size = Init_TokenList_Length;
+    return token_list;
+}
+
+Token *TokenAt(TokenList *list, int index){
+    int now_p = list->then_p + index;
+    if (now_p < 0 || now_p >= list->len){
+        return nullptr;
+    }
+    return list->val[now_p];
+}
 

@@ -3,6 +3,7 @@
 //
 
 #include "syntax.hpp"
+#include "refactor/lexical_re.hpp"
 
 
 #define keyword_num 12
@@ -286,4 +287,5 @@ token_kind gettoken(FILE *fp) {
     }
     return ERROR_TOKEN;
 }
+
 
