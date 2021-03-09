@@ -9,7 +9,7 @@
 #define CHECK_ERROR if(parser->error)return nullptr;
 
 void lexicalAnalyse(Parser *parser, FILE *in) {
-
+    parser->token_list = GetTokenList(in);
 }
 
 Node *program(Parser *parser) {
@@ -23,7 +23,7 @@ Node *program(Parser *parser) {
 }
 
 Node *extDefList(Parser *parser) {
-    if (CurrentToken(parser->token_list) == nullptr) {
+    if (CurrentToken(parser->token_list)->type == Eof) {
         return nullptr;
     }
     Node *root = GetNode();
@@ -104,8 +104,14 @@ Node *funcDef(Parser *parser) {
         DeleteNode(root);
         REPORT_ERROR_AND_RETURN
     }
+
+    Node *curly_braces = GetNode();
+    curly_braces->type = CurlyBraces;
+
     NextToken(parser->token_list);
-    AddChild(root, compoundSentenceList(parser));
+    AddChild(curly_braces, compoundStatementList(parser));
+
+    AddChild(root, curly_braces);
 
     return root;
 }
@@ -209,7 +215,7 @@ Node *formalPara(Parser *parser) {
     return root;
 }
 
-Node *compoundSentenceList(Parser *parser) {
+Node *compoundStatementList(Parser *parser) {
     Token *token = CurrentToken(parser->token_list);
 
     if (token->type == RCP) {
@@ -219,16 +225,19 @@ Node *compoundSentenceList(Parser *parser) {
     Node *root = GetNode();
     root->type = CompoundSentenceList;
 
-    AddChild(root, compoundSentence(parser));
+    AddChild(root, compoundStatement(parser));
 
-    // need to forward?
-    AddChild(root, compoundSentenceList(parser));
+    // need to forward? yes
+    // 退出compoundStatement() token指针会停留在Statement的结束符上
+
+    NextToken(parser->token_list);
+    AddChild(root, compoundStatementList(parser));
 
     return root;
 }
 
 // <复合语句> ::= <局部变量定义>  |  <语句>
-Node *compoundSentence(Parser *parser) {
+Node *compoundStatement(Parser *parser) {
     Token *token = CurrentToken(parser->token_list);
     if (token->type >= INT && token->type <= CHAR) {
         // 是 <类型说明符>
@@ -263,86 +272,183 @@ Node *localVarDef(Parser *parser) {
     return root;
 }
 
-/* <语句> ::= <表达式>; | return  <表达式>;
-           | {<复合语句序列>}
-           | if (<表达式>) <语句>
-		   | if (<表达式>) <语句> else <语句>
-           | while (<表达式>) <语句>
-           | for (<表达式>;<表达式>;<表达式>) <语句>
-           | continue; | break;
-           | <空>;
-*/
+
 Node *statement(Parser *parser) {
     CHECK_ERROR
-    Node *root;
+    Node *root = GetNode();
 
     Token *token = CurrentToken(parser->token_list);
 
-    if (token->type >= IDENT && token->type <= CHAR_CONST) { // 表达式的必要条件
-
-        root = GetNode();
-        root->type = SingleExpStatement;
-        AddChild(root, expression(parser));
-        if (token->type == SEMI)return root;
-        REPORT_ERROR_AND_RETURN
-    }
-
     switch (token->type) {
         case RETURN:
-            root = GetNode();
             root->type = ReturnStatement;
-            token = NextToken(parser->token_list);
-            if (token->type >= IDENT && token->type <= CHAR_CONST) { // 表达式的必要条件
-                AddChild(root, expression(parser));
-                // 跳出 expression() 时，token已经读取
-                if (token->type == SEMI) {
-                    return root;
-                }
+            NextToken(parser->token_list);
+            AddChild(root, expression(parser));
+            // 检查分号
+            token = CurrentToken(parser->token_list);
+            if (token->type != SEMI) {
+                DeleteNode(root);
                 REPORT_ERROR_AND_RETURN
             }
-            // 非表达式
-            REPORT_ERROR_AND_RETURN
             break;
-        case IF:// 需判断为if或if-else句式
+
+        case IF:
+            // 检查左括号
             token = NextToken(parser->token_list);
             if (token->type != LP) {
+                DeleteNode(root);
                 REPORT_ERROR_AND_RETURN
             }
-            token = NextToken(parser->token_list);
-            if (token->type >= IDENT && token->type <= CHAR_CONST) { // 表达式的必要条件
-                root = GetNode();
-                AddChild(root, expression(parser));
 
-                if (token->type != RP) {
-                    REPORT_ERROR_AND_RETURN
-                }
-                token = NextToken(parser->token_list);
-                AddChild(root, statement(parser)); // 递归调用
-
-                token = NextToken(parser->token_list);
-                if (token->type == ELSE) {
-                    root->type = IfElseStatement;
-
-                    token = NextToken(parser->token_list);
-                    AddChild(root, statement(parser));
-
-                    token = NextToken(parser->token_list); //多读一步token
-                } else {
-                    root->type = IfStatement;
-                }
-                return root;
-            }
-            REPORT_ERROR_AND_RETURN
-            break;
-        case LCP: // {<复合语句序列>}
             NextToken(parser->token_list);
-            root = compoundSentenceList(parser);
-            return root;
+            AddChild(root, expression(parser));
+
+            // 检查右括号
+            token = CurrentToken(parser->token_list);
+            if (token->type != RP) {
+                DeleteNode(root);
+                REPORT_ERROR_AND_RETURN
+            }
+
+            NextToken(parser->token_list);
+            AddChild(root, statement(parser));
+
+            // statement的结束符已由其消灭掉
+            // token指针此时停留在statement的结束符上
+
+            token = NextToken(parser->token_list);
+            if (token->type == ELSE) {
+                root->type = IfElseStatement;
+
+                NextToken(parser->token_list);
+                AddChild(root, statement(parser));
+                break;
+            } else {
+                root->type = IfStatement;
+            }
+            break;
+
+        case WHILE:
+            root->type = WhileStatement;
+
+            // 检查左括号
+            token = NextToken(parser->token_list);
+            if (token->type != LP) {
+                DeleteNode(root);
+                REPORT_ERROR_AND_RETURN
+            }
+
+            NextToken(parser->token_list);
+            AddChild(root, expression(parser));
+
+            // 检查右括号
+            token = CurrentToken(parser->token_list);
+            if (token->type != RP) {
+                DeleteNode(root);
+                REPORT_ERROR_AND_RETURN
+            }
+
+            NextToken(parser->token_list);
+            AddChild(root, statement(parser));
+            break;
+
+        case FOR:
+            root->type = ForStatement;
+            // 检查左括号
+            token = NextToken(parser->token_list);
+            if (token->type != LP) {
+                DeleteNode(root);
+                REPORT_ERROR_AND_RETURN
+            }
+
+            // 检查for前两个条件及分号
+            for (int i = 0; i < 2; ++i) {
+                token = NextToken(parser->token_list);
+                if (token->type == SEMI) {
+                    AddChild(root, nullptr);
+                }else {
+                    AddChild(root, expression(parser));
+                    token = CurrentToken(parser->token_list);
+                    if (token->type == SEMI){
+                        continue;
+                    } else{
+                        DeleteNode(root);
+                        REPORT_ERROR_AND_RETURN
+                    }
+                }
+            }
+
+            // 消耗掉第二个条件的分号
+            // 检查第三个条件
+            token = NextToken(parser->token_list);
+            if (token->type == SEMI) {
+                AddChild(root, nullptr);
+            }else {
+                AddChild(root, expression(parser));
+            }
+
+            // 检查右括号
+            token = CurrentToken(parser->token_list);
+            if (token->type != RP) {
+                DeleteNode(root);
+                REPORT_ERROR_AND_RETURN
+            }
+
+            NextToken(parser->token_list);
+            AddChild(root, statement(parser));
+            break;
+
+
+        case BREAK:
+            root->type = BreakStatement;
+            break;
+
+        case CONTINUE:
+            root->type = ContinueStatement;
+            break;
+
+        case LCP:
+            root->type = BreakStatement;
+            NextToken(parser->token_list);
+            AddChild(root, compoundStatementList(parser));
+            // 从compoundStatementList() 退出时，
+            // token指针应停留在 } 上
+            break;
+
         default:
-        REPORT_ERROR_AND_RETURN
+            root->type = SingleExpStatement;
+            AddChild(root, expression(parser));
+            // 检查分号
+            token = CurrentToken(parser->token_list);
+            if (token->type != SEMI) {
+                DeleteNode(root);
+                REPORT_ERROR_AND_RETURN
+            }
+            break;
     }
+
+    // 正常退出时,token指针应停留在 ; 或 } 上
+    return root;
+
 }
 
 Node *expression(Parser *parser) {
+
+
     return nullptr;
+}
+
+
+int priority(int stdType) {
+
+    int a = stdType;
+    if (a == PLUS || a == MINUS) return 0;
+    if (a == MULTIPLY || a == DIVIDE) return 1;
+    if (a == ASSIGN) return 4;
+    if (a == Igt || a == Ige || a == Clt || a == Cle) return 5;
+    if (a == EQ || a == UEQ) return 6;
+    if (a == AndAnd) return 7;
+    if (a == OrOr) return 8;
+
+    return -1;
 }

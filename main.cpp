@@ -7,6 +7,7 @@ int main() {
     FILE *in = fopen("test.in", "r");
 
     int a = precede(RP, Begin_End);
+    int b =1;
 
     return 0;
 }

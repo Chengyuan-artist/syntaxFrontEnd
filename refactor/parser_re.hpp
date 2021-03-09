@@ -39,9 +39,9 @@ Node *formalParaList(Parser *parser);
 
 Node *formalPara(Parser *parser);
 
-Node *compoundSentenceList(Parser *parser);
+Node *compoundStatementList(Parser *parser);
 
-Node *compoundSentence(Parser *parser);
+Node *compoundStatement(Parser *parser);
 
 Node *localVarDef(Parser *parser);
 
@@ -49,5 +49,7 @@ Node *statement(Parser *parser);
 
 Node *expression(Parser *parser);
 
+
+int priority(int stdType);
 #endif //SYNTAXFRONTEND_PARSER_HPP
 

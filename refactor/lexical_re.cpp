@@ -71,6 +71,7 @@ TokenList *GetTokenList(FILE *in) {
         AddToken(tokenList, token);
         token = GetToken(in);
     }
+    AddToken(tokenList, token); // 添加结尾结点
 
     tokenList->then_p = 0;
     return tokenList;

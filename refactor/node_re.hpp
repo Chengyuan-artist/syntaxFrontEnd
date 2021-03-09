@@ -9,8 +9,9 @@
 
 enum NodeType{
     Program, ExtDefList, ExtVarDef, FuncDef, VarList, FormalParaList, FormalPara,
-    CompoundSentenceList, LocalVarDef,
+    CompoundSentenceList, LocalVarDef, WhileStatement,BreakStatement, ContinueStatement,ForStatement,
     SingleExpStatement, ReturnStatement, IfStatement, IfElseStatement,
+    CurlyBraces,
     TokenType
 };
 
