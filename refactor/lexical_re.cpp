@@ -369,3 +369,9 @@ Token *TokenAt(TokenList *list, int index){
     return (list->val)[now_p];
 }
 
+Token *GetToken() {
+    Token * token = (Token*)malloc(sizeof(Token));
+    memset(token,0,sizeof(Token));
+    return token;
+}
+

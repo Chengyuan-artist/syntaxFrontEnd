@@ -11,7 +11,8 @@ enum NodeType{
     Program, ExtDefList, ExtVarDef, FuncDef, DeclaratorList, FormalParaList, FormalPara,
     CompoundSentenceList, LocalVarDef, WhileStatement,BreakStatement, ContinueStatement,ForStatement,
     SingleExpStatement, ReturnStatement, IfStatement, IfElseStatement,
-    CurlyBraces,ArrayDeclarator,
+    CurlyBraces, Parentheses, ArrayDeclarator, Array, Function,Expression,
+    ArgumentsList,
     TokenType
 };
 

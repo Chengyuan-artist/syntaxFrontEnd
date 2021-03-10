@@ -15,6 +15,5 @@ int main(){
     LexicalAnalyse(parser);
     Parsing(parser);
 
-    Node *root = parser->root;
     return 0;
 }

@@ -32,11 +32,17 @@ Node *program(Parser *parser) {
 
     AddChild(root, extDefList(parser));
 
+    if (parser->error) {
+        DeleteNode(root);
+        root = nullptr;
+    }
+
     // TODO 语法错误传递
     return root;
 }
 
 Node *extDefList(Parser *parser) {
+    CHECK_ERROR
     Token *token = CurrentToken(parser->token_list);
     if (token->type == Eof) {
         return nullptr;
@@ -45,13 +51,12 @@ Node *extDefList(Parser *parser) {
 
     AddChild(root, extDef(parser));
 
-//    NextToken(parser->token_list); // no need?
     AddChild(root, extDefList(parser));
     return root;
 }
 
 Node *extDef(Parser *parser) {
-
+    CHECK_ERROR
     // 判断区分变量定义与函数定义
 
     Token *token = CurrentToken(parser->token_list);
@@ -76,6 +81,7 @@ Node *extDef(Parser *parser) {
 }
 
 Node *extVarDef(Parser *parser) {
+    CHECK_ERROR
     Node *root = GetNode(ExtVarDef);
 
     Node *type_id = GetNode(TokenAt(parser->token_list, -2));
@@ -89,6 +95,7 @@ Node *extVarDef(Parser *parser) {
 
 // <函数定义>：：=<类型说明符> <函数名> (<形式参数序列>) {<复合语句序列>}  (可无)
 Node *funcDef(Parser *parser) {
+    CHECK_ERROR
 
     Node *root = GetNode(FuncDef);
 
@@ -109,6 +116,8 @@ Node *funcDef(Parser *parser) {
     if (token->type == SEMI) {
         return root;
     }
+
+    // 花括号交由func判断
     if (token->type != LCP) {
         DeleteNode(root);
         REPORT_ERROR_AND_RETURN
@@ -125,6 +134,7 @@ Node *funcDef(Parser *parser) {
 }
 
 Node *declaratorList(Parser *parser) {
+    CHECK_ERROR
 
     Node *root = GetNode(DeclaratorList);
     // 左孩子
@@ -153,6 +163,7 @@ Node *declaratorList(Parser *parser) {
 }
 
 Node *declarator(Parser *parser) {
+    CHECK_ERROR
     // 调用前token指针指向示意
     // int id [ 10 ]      或     int  id , a , b [ 4 ]
     //        ^                          ^
@@ -198,6 +209,7 @@ Node *declarator(Parser *parser) {
 
 // <形式参数序列>：：=<形式参数> , <形式参数序列>  |  <空>
 Node *formalParaList(Parser *parser) {
+    CHECK_ERROR
 
     Token *token = CurrentToken(parser->token_list);
     if (token->type == RP) {
@@ -230,6 +242,7 @@ Node *formalParaList(Parser *parser) {
 
 // <形式参数>：：=<类型说明符> 标识符
 Node *formalPara(Parser *parser) {
+    CHECK_ERROR
     Token *token = CurrentToken(parser->token_list);
     // 如果不是类型说明符
     if (token->type < INT || token->type > CHAR) {
@@ -257,9 +270,11 @@ Node *formalPara(Parser *parser) {
 }
 
 Node *compoundStatementList(Parser *parser) {
+    CHECK_ERROR
     Token *token = CurrentToken(parser->token_list);
 
     if (token->type == RCP) {
+        NextToken(parser->token_list); // 消耗掉右花括号
         return nullptr;
     }
 
@@ -269,8 +284,9 @@ Node *compoundStatementList(Parser *parser) {
 
     // need to forward? yes
     // 退出compoundStatement() token指针会停留在Statement的结束符上
+    // 不 已更改Statement,指针会更进一步
 
-    NextToken(parser->token_list);
+//    NextToken(parser->token_list);
     AddChild(root, compoundStatementList(parser));
 
     return root;
@@ -278,6 +294,7 @@ Node *compoundStatementList(Parser *parser) {
 
 // <复合语句> ::= <局部变量定义>  |  <语句>
 Node *compoundStatement(Parser *parser) {
+    CHECK_ERROR
     Token *token = CurrentToken(parser->token_list);
     if (token->type >= INT && token->type <= CHAR) {
         // 是 <类型说明符>
@@ -289,6 +306,7 @@ Node *compoundStatement(Parser *parser) {
 
 // <局部变量定义> ::= <类型说明符> <变量序列>;
 Node *localVarDef(Parser *parser) {
+    CHECK_ERROR
 
     Node *root = GetNode(LocalVarDef);
 
@@ -297,9 +315,8 @@ Node *localVarDef(Parser *parser) {
     AddChild(root, type_id);
 
     Token *token = NextToken(parser->token_list);
-    if (token->type < INT || token->type > CHAR) {
-        // 不是类型说明符
-        DeleteNode(root);
+
+    if (token->type != Identifier){
         REPORT_ERROR_AND_RETURN
     }
     NextToken(parser->token_list);
@@ -327,6 +344,7 @@ Node *statement(Parser *parser) {
                 DeleteNode(root);
                 REPORT_ERROR_AND_RETURN
             }
+            token = NextToken(parser->token_list); // 消耗掉分号
             break;
 
         case IF:
@@ -351,9 +369,9 @@ Node *statement(Parser *parser) {
             AddChild(root, statement(parser));
 
             // statement的结束符已由其消灭掉
-            // token指针此时停留在statement的结束符上
+            // token指针此时停留在statement的下一个token上
 
-            token = NextToken(parser->token_list);
+            token = CurrentToken(parser->token_list);
             if (token->type == ELSE) {
                 root->type = IfElseStatement;
 
@@ -438,18 +456,29 @@ Node *statement(Parser *parser) {
 
         case BREAK:
             root->type = BreakStatement;
+            token = NextToken(parser->token_list);
+            if (token->type != SEMI) {
+                REPORT_ERROR_AND_RETURN
+            }
+            NextToken(parser->token_list);
             break;
 
         case CONTINUE:
             root->type = ContinueStatement;
+            token = NextToken(parser->token_list);
+            if (token->type != SEMI) {
+                REPORT_ERROR_AND_RETURN
+            }
+            NextToken(parser->token_list);
             break;
 
         case LCP:
-            root->type = BreakStatement;
+            root->type = CurlyBraces;
             NextToken(parser->token_list);
             AddChild(root, compoundStatementList(parser));
             // 从compoundStatementList() 退出时，
-            // token指针应停留在 } 上
+            // token指针应停留在 } 后
+
             break;
 
         default:
@@ -461,32 +490,248 @@ Node *statement(Parser *parser) {
                 DeleteNode(root);
                 REPORT_ERROR_AND_RETURN
             }
+            NextToken(parser->token_list);
             break;
     }
 
-    // 正常退出时,token指针应停留在 ; 或 } 上
-    NextToken(parser->token_list);
+    // 正常退出时,token指针应停留在  ;之后  或 }后
+
     return root;
 
 }
 
+#include <stack>
+
+using namespace std;
+
+#define Set_Max_Size 40
+#define Exp_Legal_Token_Set_Len 20
+#define Operator_Set_Len 14
+
+enum TokenType exp_legal_token_set[Set_Max_Size] =
+        {
+                ASSIGN, LP, AndAnd, OrOr, PLUS, MINUS, MULTIPLY,
+                DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige, Identifier,
+                INT_CONST, LONG_CONST, FLOAT_CONST, CHAR_CONST,
+        };
+
+enum TokenType operator_set[Set_Max_Size] =
+        {
+                ASSIGN, AndAnd, OrOr, PLUS, MINUS, MULTIPLY,
+                DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige,
+        };
+
+int isElemInSet(enum TokenType elem, const enum TokenType *set, int len) {
+    for (int i = 0; i < len; ++i) {
+        if (elem == set[i]) return 1;
+    }
+    return 0;
+}
+
+Node *argumentsList(Parser *parser) {
+    CHECK_ERROR
+    Token *token = CurrentToken(parser->token_list);
+
+    if (token->type == RP) {
+        return nullptr;
+    }
+
+    Node *root = GetNode(ArgumentsList);
+    AddChild(root, expression(parser));
+
+    token = CurrentToken(parser->token_list);
+
+    if (token->type == COMMA) {
+        NextToken(parser->token_list);
+        AddChild(root, argumentsList(parser));
+    }
+
+    return root;
+}
+
 Node *expression(Parser *parser) {
+    CHECK_ERROR
 
+    Token *token = CurrentToken(parser->token_list);
 
-    return nullptr;
+    int need_operand = 1;
+
+    stack<Node *> opRand;
+    stack<Token *> opT;
+
+    Token *begin_op = GetToken();
+    begin_op->type = Begin_Op;
+    opT.push(begin_op);
+
+    // 判断条件 属于expression的合法字符
+    while (isElemInSet(token->type, exp_legal_token_set, Exp_Legal_Token_Set_Len)) {
+
+        // 若token为操作符
+        if (isElemInSet(token->type, operator_set, Operator_Set_Len)) {
+            if (need_operand) {
+                REPORT_ERROR_AND_RETURN
+            }
+
+            Token *last_op = opT.top();
+
+            if (precede(token->type, last_op->type)) { // 运算符优先级高于栈顶运算符
+                opT.push(token);
+            } else { // 运算符优先级低于栈顶运算符
+                Node *r_operand = opRand.top();
+                opRand.pop();
+                Node *l_operand = opRand.top();
+                opRand.pop();
+
+                Node *new_operand = GetNode(last_op);
+                opT.pop();
+
+                AddChild(new_operand, l_operand);
+                AddChild(new_operand, r_operand);
+
+                if (token->type == ASSIGN) {
+                    if ((l_operand->type == TokenType && l_operand->token->type == Identifier)
+                        || (l_operand->type == Array)) {
+                        // 可赋值左值 合法
+                    }else {
+                        DeleteNode(new_operand);
+                        REPORT_ERROR_AND_RETURN
+                    }
+                }
+
+                opRand.push(new_operand);
+            }
+
+            need_operand = 1;
+            token = NextToken(parser->token_list);
+
+        } else { // token为合法的其他字符->对应操作数
+
+            if (!need_operand) {
+                REPORT_ERROR_AND_RETURN
+            }
+
+            if (token->type == LP) {
+                // 将括号内的内容视作一个操作数
+                NextToken(parser->token_list); // 消耗掉左括号
+
+                Node *new_operand = GetNode(Parentheses);
+                AddChild(new_operand, expression(parser));
+
+                token = CurrentToken(parser->token_list);
+                if (token->type != RP) {
+                    // 括号不匹配
+                    REPORT_ERROR_AND_RETURN
+                }
+
+                opRand.push(new_operand); // 新操作数进栈
+
+                token = NextToken(parser->token_list); // 消耗掉右括号
+
+            } else {
+                // 操作数对应四种类型: identifier, a[<expression>], func(c,d...)
+                //                  constant
+
+                if (token->type == Identifier) {
+                    // 从三种类型中判断
+
+                    Node *new_operand = GetNode();
+                    Node *operand_type = GetNode(token);
+
+                    token = NextToken(parser->token_list);
+
+                    switch (token->type) {
+                        case LP:
+                            new_operand->type = Function;
+                            AddChild(new_operand, operand_type);
+                            NextToken(parser->token_list);
+                            AddChild(new_operand, argumentsList(parser));
+
+                            // 检查右括号
+                            token = CurrentToken(parser->token_list);
+                            if (token->type != RP) {
+                                REPORT_ERROR_AND_RETURN
+                            }
+                            token = NextToken(parser->token_list); // 消耗右括号
+                            break;
+
+                        case LSP:
+                            new_operand->type = Array;
+                            AddChild(new_operand, operand_type);
+                            NextToken(parser->token_list);
+                            AddChild(new_operand, expression(parser));
+
+                            token = CurrentToken(parser->token_list);
+                            if (token->type != RSP) {
+                                REPORT_ERROR_AND_RETURN
+                            }
+                            token = NextToken(parser->token_list); // 消耗右方括号
+                            break;
+
+                        default:
+                            DeleteNode(new_operand);
+                            new_operand = operand_type;
+                            break;
+                    }
+
+                    opRand.push(new_operand);
+
+                } else { // constant
+                    Node *new_operand = GetNode(token);
+                    opRand.push(new_operand);
+                    token = NextToken(parser->token_list);
+                }
+            }
+            need_operand = 0;
+        }
+    }
+
+    CHECK_ERROR
+
+    if (need_operand) {
+        REPORT_ERROR_AND_RETURN
+    }
+
+    while (opT.size() != 1) {
+        Token *last_op = opT.top();
+        Node *new_operand = GetNode(last_op);
+        opT.pop();
+
+        Node *r_operand = opRand.top();
+        opRand.pop();
+        Node *l_operand = opRand.top();
+        opRand.pop();
+
+        AddChild(new_operand, l_operand);
+        AddChild(new_operand, r_operand);
+
+        opRand.push(new_operand);
+    }
+
+    Node *root = GetNode(Expression);
+    AddChild(root, opRand.top());
+
+    return root;
 }
 
 
-int priority(int stdType) {
+int precede(enum TokenType op1, enum TokenType op2) {
+    if (priority(op1) < priority(op2)) {
+        return 1;
+    }
+    return 0;
+}
 
-    int a = stdType;
-    if (a == PLUS || a == MINUS) return 0;
-    if (a == MULTIPLY || a == DIVIDE) return 1;
-    if (a == ASSIGN) return 4;
-    if (a == Igt || a == Ige || a == Clt || a == Cle) return 5;
-    if (a == EQ || a == UEQ) return 6;
-    if (a == AndAnd) return 7;
-    if (a == OrOr) return 8;
+int priority(enum TokenType type) {
 
-    return -1;
+    enum TokenType a = type;
+    if (a == MULTIPLY || a == DIVIDE || a == MOD) return 3;
+    if (a == PLUS || a == MINUS) return 4;
+    if (a == Igt || a == Ige || a == Clt || a == Cle) return 6;
+    if (a == EQ || a == UEQ) return 7;
+    if (a == AndAnd) return 11;
+    if (a == OrOr) return 12;
+    if (a == ASSIGN) return 14;
+    if (a == Begin_Op)return 15;
+
+    return 16; // Max
 }

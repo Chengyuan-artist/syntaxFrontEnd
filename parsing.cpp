@@ -360,11 +360,11 @@ Node *expression() {
     std::stack<Node *> opn;
 
     Node *end_mark = getNode();
-    end_mark->type = Begin_End;
+    end_mark->type = Begin_Op;
 
     opt.push(end_mark);
 
-    while ((token_type != Begin_End) && !error) {
+    while ((token_type != Begin_Op) && !error) {
 
         if (token_type >= Identifier && token_type <= CHAR_CONST) { // 如果token是操作数
             // TODO: 函数调用形式
@@ -430,7 +430,7 @@ Node *expression() {
         }
     }
 
-    if (!error && opn.size() == 1 && opt.top()->type == Begin_End && opt.size() == 1) {
+    if (!error && opn.size() == 1 && opt.top()->type == Begin_Op && opt.size() == 1) {
         // 运算符和操作数相匹配
         return opn.top();
     } else {
@@ -450,7 +450,7 @@ int op_priority(int stdType) {
     if (a == EQ || a == UEQ) return 6;
     if (a == AndAnd) return 7;
     if (a == OrOr) return 8;
-    if (a == Begin_End) return 9;
+    if (a == Begin_Op) return 9;
 
     error = 1;
     return -1;

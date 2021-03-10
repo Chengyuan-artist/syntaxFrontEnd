@@ -17,6 +17,7 @@ enum TokenType {
     INT, LONG, FLOAT, DOUBLE, CHAR, IF, ELSE, WHILE, FOR, RETURN, BREAK, CONTINUE,
     LSP, RSP, LCP, RCP, SEMI, COMMA,
     ASSIGN, LP, RP, AndAnd, OrOr, PLUS, MINUS, MULTIPLY, DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige,
+    Begin_Op,
     Eof
 };
 
@@ -42,6 +43,9 @@ typedef struct TokenList {
 TokenList* getTokenList();
 
 void AddToken(TokenList *token_list, Token *token);
+
+// new
+Token* GetToken();
 
 // Public
 Token* GetToken(FILE *in);

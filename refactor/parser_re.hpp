@@ -56,7 +56,11 @@ Node *statement(Parser *parser);
 
 Node *expression(Parser *parser);
 
+Node *argumentsList(Parser *parser);
 
-int priority(int stdType);
+int precede(enum TokenType, enum TokenType);
+
+int priority(enum TokenType);
+
 #endif //SYNTAXFRONTEND_PARSER_HPP
 

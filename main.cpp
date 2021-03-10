@@ -6,7 +6,7 @@ using namespace std;
 int main() {
     FILE *in = fopen("test.in", "r");
 
-    int a = precede(RP, Begin_End);
+    int a = precede(RP, Begin_Op);
     int b =1;
 
     return 0;

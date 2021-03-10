@@ -4,14 +4,15 @@
 
 
 &lt;ExtDefList&gt; ::=  &lt;ExtDef&gt; &lt;ExtDefList&gt; 
-                | &lt;ExtDefList&gt;
+                | &lt;ExtDef&gt;
+                | &lt;Blank&gt;
 
 
 &lt;ExtDef&gt; ::=  &lt;ExtVarDef&gt; 
             | &lt;FuncDef&gt;
 
 
-&lt;ExtVarDef&gt; ::= &lt;TypeSpecifier&gt; &lt;DeclaratorList&gt;
+&lt;ExtVarDef&gt; ::= &lt;TypeSpecifier&gt; &lt;DeclaratorList&gt; ;
 
 
 &lt;TypeSpecifier&gt; ::= int 
@@ -43,7 +44,8 @@
 
 
 
-&lt;CompoundStatementList&gt; ::= &lt;CompoundStatement&gt;, &lt;CompoundStatementList&gt;
+&lt;CompoundStatementList&gt; ::= &lt;CompoundStatement&gt;  &lt;CompoundStatementList&gt;
+                           |&lt;CompoundStatement&gt;
 
 
 
@@ -51,7 +53,7 @@
                           | &lt;Statement&gt; 
 
 
-&lt;LocalVarDef&gt; ::= &lt;TypeSpecifier&gt; &lt;DeclaratorList&gt;
+&lt;LocalVarDef&gt; ::= &lt;TypeSpecifier&gt; &lt;DeclaratorList&gt; ;
 
 
 &lt;Statement&gt; ::=   &lt;Expression&gt;; 

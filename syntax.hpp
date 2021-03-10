@@ -23,7 +23,7 @@ enum token_kind {
     Program, ExtDefList, ExtVarDef, FuncDef, DeclaratorList, FormalParaList, FormalPara,
     CompoundSentenceList, LocalVarDef,
     SingleExpStatement, ReturnStatement, IfStatement, IfElseStatement,
-    Begin_End, Brackets
+    Begin_Op, Brackets
 };
 
 typedef struct node{
