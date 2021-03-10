@@ -22,7 +22,7 @@ TokenType check_keyword() {
         if (strcmp(token_text, keyword[i]) == 0)
             return TokenType(INT + i);
     }
-    return IDENT;
+    return Identifier;
 }
 
 TokenType const_suffix(char ch) {
@@ -45,7 +45,7 @@ Token *GetToken(FILE *fp) {
     token->then_row = then_row;
     memset(token->text, 0, sizeof(token_text));
 
-    if (token->type == IDENT
+    if (token->type == Identifier
         || token->type == INT_CONST
         || token->type == FLOAT_CONST
         || token->type == LONG_CONST
@@ -335,12 +335,12 @@ TokenType gettoken(FILE *fp) {
 }
 
 Token *NextToken(TokenList *list) {
-    list->then_p++;
-    return list->then_p < list->len ? list->val[list->then_p] : nullptr;
+    (list->then_p)++;
+    return CurrentToken(list);
 }
 
 Token *CurrentToken(TokenList *list) {
-    return list->then_p < list->len ? list->val[list->then_p] : nullptr;
+    return TokenAt(list, 0);
 }
 
 void AddToken(TokenList *token_list, Token *token) {
@@ -366,6 +366,6 @@ Token *TokenAt(TokenList *list, int index){
     if (now_p < 0 || now_p >= list->len){
         return nullptr;
     }
-    return list->val[now_p];
+    return (list->val)[now_p];
 }
 

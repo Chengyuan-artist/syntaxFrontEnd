@@ -130,7 +130,7 @@ Node *extDef() {
     tmp_type = token_type;
 
     token_type = gettoken(fp);
-    if (token_type != IDENT) {
+    if (token_type != Identifier) {
         REPORT_ERROR_AND_RETURN
     }
 
@@ -165,18 +165,18 @@ Node *varList() {
     }
 
     Node *root = getNode();
-    root->type = VarList;
+    root->type = DeclaratorList;
 
     // 左孩子
     Node *lc = getNode();
-    lc->type = IDENT;
+    lc->type = Identifier;
     strcpy(lc->val.text, tmp_token);
     root->val.children[0] = lc;
 
 
     if (token_type == COMMA) {
         token_type = gettoken(fp);
-        if (token_type != IDENT) {
+        if (token_type != Identifier) {
             free(lc);
             free(root);
             REPORT_ERROR_AND_RETURN
@@ -206,7 +206,7 @@ Node *funcDef() {
     root->val.children[0] = type;
 
     Node *name = getNode();
-    name->type = IDENT;
+    name->type = Identifier;
     strcpy(name->val.text, token_text);
     root->val.children[1] = name;
 
@@ -270,7 +270,7 @@ Node *statement() {
     Node *root ;
 
     // TODO: 指定 type ?
-    if (token_type >= IDENT && token_type <= CHAR_CONST) { // 表达式的必要条件
+    if (token_type >= Identifier && token_type <= CHAR_CONST) { // 表达式的必要条件
 
         root = getNode();
         root->type = SingleExpStatement;
@@ -284,7 +284,7 @@ Node *statement() {
             root = getNode();
             root->type = ReturnStatement;
             token_type = gettoken(fp);
-            if (token_type >= IDENT && token_type <= CHAR_CONST) { // 表达式的必要条件
+            if (token_type >= Identifier && token_type <= CHAR_CONST) { // 表达式的必要条件
                 root->val.children[0] = expression();
                 // 跳出 expression() 时，token已经读取
                 if (token_type == SEMI) {
@@ -301,7 +301,7 @@ Node *statement() {
                 REPORT_ERROR_AND_RETURN
             }
             token_type = gettoken(fp);
-            if (token_type >= IDENT && token_type <= CHAR_CONST) { // 表达式的必要条件
+            if (token_type >= Identifier && token_type <= CHAR_CONST) { // 表达式的必要条件
                 root = getNode();
                 root->val.children[0] = expression();
 
@@ -350,7 +350,7 @@ Node *expression() {
     // 以 ; 或 ) 判断结束
     // 表达式有三种类型的单体
     // 常量 变量 函数调用  etc. 12.3 + a + func(5, b);
-    if (!(token_type >= IDENT && token_type <= CHAR_CONST)) { // 表达式的必要条件不满足
+    if (!(token_type >= Identifier && token_type <= CHAR_CONST)) { // 表达式的必要条件不满足
         REPORT_ERROR_AND_RETURN
     }
 
@@ -366,7 +366,7 @@ Node *expression() {
 
     while ((token_type != Begin_End) && !error) {
 
-        if (token_type >= IDENT && token_type <= CHAR_CONST) { // 如果token是操作数
+        if (token_type >= Identifier && token_type <= CHAR_CONST) { // 如果token是操作数
             // TODO: 函数调用形式
             Node *num = getNode();
             num->type = token_type;
@@ -486,14 +486,14 @@ Node *localVarDef() {
 Node *varList_up() {
     CHECK_ERROR
     token_type = gettoken(fp);
-    if (token_type != IDENT) {
+    if (token_type != Identifier) {
         REPORT_ERROR_AND_RETURN
         return nullptr;
     }
     Node *root = getNode();
-    root->type = VarList;
+    root->type = DeclaratorList;
     Node *lc = getNode();
-    lc->type = IDENT;
+    lc->type = Identifier;
     strcpy(lc->val.text, token_text);
     root->val.children[0] = lc;
 
@@ -550,7 +550,7 @@ Node *formalPara() {
     tmp_type = token_type;
 
     token_type = gettoken(fp);
-    if (token_type != IDENT) {
+    if (token_type != Identifier) {
         REPORT_ERROR_AND_RETURN
     }
     Node *root = getNode();
@@ -559,7 +559,7 @@ Node *formalPara() {
     Node *lc = getNode();
     lc->type = tmp_type;
     Node *rc = getNode();
-    rc->type = IDENT;
+    rc->type = Identifier;
     strcpy(rc->val.text, token_text);
 
     root->val.children[0] = lc;

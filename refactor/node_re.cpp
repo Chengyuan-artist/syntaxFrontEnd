@@ -14,6 +14,20 @@ Node *GetNode() {
     return root;
 }
 
+Node *GetNode(enum NodeType type) {
+    Node *node = GetNode();
+    node->type = type;
+    return node;
+}
+
+
+Node *GetNode(Token *token) {
+    Node *node = GetNode();
+    node->type = TokenType;
+    node->token = token;
+    return node;
+}
+
 void DeleteNode(Node *root) {
 
     if (root == nullptr) return;
@@ -22,4 +36,5 @@ void DeleteNode(Node *root) {
     }
     free(root);
 }
+
 

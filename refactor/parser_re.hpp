@@ -11,6 +11,7 @@
 #define SYNTAXFRONTEND_PARSER_RE_HPP
 
 typedef struct Parser{
+    FILE *in;
     TokenList *token_list;
     Node *root;
 
@@ -21,7 +22,11 @@ typedef struct Parser{
 
 }Parser;
 
-void lexicalAnalyse(Parser *parser, FILE *in);
+Parser *GetParser(FILE *fp);
+
+void Parsing(Parser *parser);
+
+void LexicalAnalyse(Parser *parser);
 
 Node *program(Parser *parser);
 
@@ -34,6 +39,8 @@ Node *extVarDef(Parser *parser);
 Node *funcDef(Parser *parser);
 
 Node *declaratorList(Parser *parser);
+
+Node *declarator(Parser *parser);
 
 Node *formalParaList(Parser *parser);
 

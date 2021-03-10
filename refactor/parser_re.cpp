@@ -8,13 +8,27 @@
 #define REPORT_ERROR_AND_RETURN parser->error = 1;return nullptr;
 #define CHECK_ERROR if(parser->error)return nullptr;
 
-void lexicalAnalyse(Parser *parser, FILE *in) {
-    parser->token_list = GetTokenList(in);
+
+Parser *GetParser(FILE *fp){
+    Parser *parser = (Parser *)malloc(sizeof(Parser));
+    memset(parser, 0 , sizeof(Parser));
+    parser->in = fp;
+    return parser;
+}
+
+void Parsing(Parser *parser){
+    if (parser->token_list == nullptr) return;
+    parser->root = program(parser);
+}
+
+void LexicalAnalyse(Parser *parser) {
+    parser->token_list = GetTokenList(parser->in);
+
+    // token error catch
 }
 
 Node *program(Parser *parser) {
-    Node *root = GetNode();
-    root->type = Program;
+    Node *root = GetNode(Program);
 
     AddChild(root, extDefList(parser));
 
@@ -23,50 +37,48 @@ Node *program(Parser *parser) {
 }
 
 Node *extDefList(Parser *parser) {
-    if (CurrentToken(parser->token_list)->type == Eof) {
+    Token *token = CurrentToken(parser->token_list);
+    if (token->type == Eof) {
         return nullptr;
     }
-    Node *root = GetNode();
-    root->type = ExtDefList;
+    Node *root = GetNode(ExtDefList);
+
     AddChild(root, extDef(parser));
 
-    NextToken(parser->token_list); // no need?
+//    NextToken(parser->token_list); // no need?
     AddChild(root, extDefList(parser));
     return root;
 }
 
 Node *extDef(Parser *parser) {
 
+    // 判断区分变量定义与函数定义
 
     Token *token = CurrentToken(parser->token_list);
 
     // 如果 token 不是类型说明符
-    if (token->type < INT || token->type < CHAR) {
+    if (token->type < INT || token->type > CHAR) {
         REPORT_ERROR_AND_RETURN
     }
 
-    NextToken(parser->token_list);
-    token = CurrentToken(parser->token_list);
+    token = NextToken(parser->token_list);
 
-    if (token->type != IDENT) {
+    if (token->type != Identifier) {
         REPORT_ERROR_AND_RETURN;
     }
 
-    NextToken(parser->token_list);
-    token = CurrentToken(parser->token_list);
+    token = NextToken(parser->token_list);
 
-    if (token->type != LP) {
-        return extVarDef(parser);
-    } else return funcDef(parser);
+    if (token->type == LP) {
+        return funcDef(parser);
+    } else return extVarDef(parser);
 
 }
 
 Node *extVarDef(Parser *parser) {
-    Node *root = GetNode();
-    root->type = ExtVarDef;
+    Node *root = GetNode(ExtVarDef);
 
-    Node *type_id = GetNode();
-    type_id->token = TokenAt(parser->token_list, -2);
+    Node *type_id = GetNode(TokenAt(parser->token_list, -2));
 
     AddChild(root, type_id);
 
@@ -78,17 +90,14 @@ Node *extVarDef(Parser *parser) {
 // <函数定义>：：=<类型说明符> <函数名> (<形式参数序列>) {<复合语句序列>}  (可无)
 Node *funcDef(Parser *parser) {
 
-    Node *root = GetNode();
-    root->type = FuncDef;
+    Node *root = GetNode(FuncDef);
 
-    Node *type_id = GetNode();
-    type_id->type = TokenType;
-    type_id->token = TokenAt(parser->token_list, -2);
+    Node *type_id = GetNode(TokenAt(parser->token_list, -2));
+
     AddChild(root, type_id);
 
-    Node *func_name = GetNode();
-    func_name->type = TokenType;
-    func_name->token = TokenAt(parser->token_list, -1);
+    Node *func_name = GetNode(TokenAt(parser->token_list, -1));
+
     AddChild(root, func_name);
 
     NextToken(parser->token_list);
@@ -105,8 +114,7 @@ Node *funcDef(Parser *parser) {
         REPORT_ERROR_AND_RETURN
     }
 
-    Node *curly_braces = GetNode();
-    curly_braces->type = CurlyBraces;
+    Node *curly_braces = GetNode(CurlyBraces);
 
     NextToken(parser->token_list);
     AddChild(curly_braces, compoundStatementList(parser));
@@ -118,24 +126,15 @@ Node *funcDef(Parser *parser) {
 
 Node *declaratorList(Parser *parser) {
 
-    Token *token = CurrentToken(parser->token_list);
-
-    if (token->type != COMMA && token->type != SEMI) {
-        REPORT_ERROR_AND_RETURN
-    }
-
-    Node *root = GetNode();
-    root->type = VarList;
+    Node *root = GetNode(DeclaratorList);
     // 左孩子
-    Node *lc = GetNode();
-    lc->type = TokenType;
-    lc->token = TokenAt(parser->token_list, -1);
+    Node *var = declarator(parser);
+    AddChild(root, var);
 
-    AddChild(root, lc);
-
+    Token *token = CurrentToken(parser->token_list);
     if (token->type == COMMA) {
         token = NextToken(parser->token_list);
-        if (token->type != IDENT) {
+        if (token->type != Identifier) {
             // error
             DeleteNode(root);
             REPORT_ERROR_AND_RETURN
@@ -153,6 +152,50 @@ Node *declaratorList(Parser *parser) {
     REPORT_ERROR_AND_RETURN
 }
 
+Node *declarator(Parser *parser) {
+    // 调用前token指针指向示意
+    // int id [ 10 ]      或     int  id , a , b [ 4 ]
+    //        ^                          ^
+    Node *root = GetNode();
+
+    Node *identifier = GetNode(TokenAt(parser->token_list, -1));
+
+    Token *token = CurrentToken(parser->token_list);
+    if (token->type == LSP) { // 如果是左方括号
+        root->type = ArrayDeclarator;
+        AddChild(root, identifier);
+
+        // 以下按照 正确条件书写
+        token = NextToken(parser->token_list);
+        if (token->type == INT_CONST || token->type == LONG_CONST) {
+            Node *constant = GetNode(token);
+            AddChild(root, constant);
+
+            token = NextToken(parser->token_list);
+            if (token->type == RSP) {
+                // 消耗掉一个 ]
+                NextToken(parser->token_list);
+                return root;
+            } else {
+                DeleteNode(root);
+                REPORT_ERROR_AND_RETURN
+            }
+        } else {
+            DeleteNode(root);
+            REPORT_ERROR_AND_RETURN
+        }
+    }
+
+    // 如果不是左方括号
+    DeleteNode(root);
+
+    return identifier;
+    // 调用后token指针指向示意
+    // int id [ 10 ] ;     或     int  id , a , b [ 4 ]
+    //               ^                    ^
+}
+
+
 // <形式参数序列>：：=<形式参数> , <形式参数序列>  |  <空>
 Node *formalParaList(Parser *parser) {
 
@@ -161,8 +204,8 @@ Node *formalParaList(Parser *parser) {
         return nullptr;
     }
 
-    Node *root = GetNode();
-    root->type = FormalParaList;
+    Node *root = GetNode(FormalParaList);
+
     AddChild(root, formalPara(parser));
 
     token = NextToken(parser->token_list);
@@ -192,25 +235,23 @@ Node *formalPara(Parser *parser) {
     if (token->type < INT || token->type > CHAR) {
         REPORT_ERROR_AND_RETURN
     }
-    Node *root = GetNode();
-    root->type = FormalPara;
+    Node *root = GetNode(FormalPara);
 
-    Node *lc = GetNode();
-    lc->type = TokenType;
-    lc->token = CurrentToken(parser->token_list);
+
+    Node *lc = GetNode( CurrentToken(parser->token_list) );
+
     AddChild(root, lc);
 
     // need an identity
     token = NextToken(parser->token_list);
-    if (token->type != IDENT) {
+    if (token->type != Identifier) {
         DeleteNode(root);
         REPORT_ERROR_AND_RETURN
     }
 
-    Node *rc = GetNode();
-    rc->type = TokenType;
-    rc->token = CurrentToken(parser->token_list);
-    AddChild(root, lc);
+    Node *rc = GetNode(CurrentToken(parser->token_list));
+
+    AddChild(root, rc);
 
     return root;
 }
@@ -222,8 +263,7 @@ Node *compoundStatementList(Parser *parser) {
         return nullptr;
     }
 
-    Node *root = GetNode();
-    root->type = CompoundSentenceList;
+    Node *root = GetNode(CompoundSentenceList);
 
     AddChild(root, compoundStatement(parser));
 
@@ -250,12 +290,9 @@ Node *compoundStatement(Parser *parser) {
 // <局部变量定义> ::= <类型说明符> <变量序列>;
 Node *localVarDef(Parser *parser) {
 
-    Node *root = GetNode();
-    root->type = LocalVarDef;
+    Node *root = GetNode(LocalVarDef);
 
-    Node *type_id = GetNode();
-    type_id->type = TokenType;
-    type_id->token = CurrentToken(parser->token_list);
+    Node *type_id = GetNode(CurrentToken(parser->token_list));
 
     AddChild(root, type_id);
 
@@ -428,6 +465,7 @@ Node *statement(Parser *parser) {
     }
 
     // 正常退出时,token指针应停留在 ; 或 } 上
+    NextToken(parser->token_list);
     return root;
 
 }

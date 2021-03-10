@@ -15,12 +15,12 @@
 
 enum token_kind {
     Eof,
-    ERROR_TOKEN, IDENT, INT_CONST, LONG_CONST, FLOAT_CONST, CHAR_CONST,
+    ERROR_TOKEN, Identifier, INT_CONST, LONG_CONST, FLOAT_CONST, CHAR_CONST,
     INT, LONG, FLOAT, DOUBLE, CHAR, IF, ELSE, WHILE, FOR, RETURN, BREAK, CONTINUE,
     LSP, RSP, LCP, RCP, SEMI, COMMA,
     ASSIGN, LP, RP, AndAnd, OrOr, PLUS, MINUS, MULTIPLY, DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige,
     NoType,
-    Program, ExtDefList, ExtVarDef, FuncDef, VarList, FormalParaList, FormalPara,
+    Program, ExtDefList, ExtVarDef, FuncDef, DeclaratorList, FormalParaList, FormalPara,
     CompoundSentenceList, LocalVarDef,
     SingleExpStatement, ReturnStatement, IfStatement, IfElseStatement,
     Begin_End, Brackets

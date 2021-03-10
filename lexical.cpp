@@ -24,7 +24,7 @@ token_kind check_keyword() {
         if (strcmp(token_text, keyword[i]) == 0)
             return token_kind(INT + i);
     }
-    return IDENT;
+    return Identifier;
 }
 
 token_kind const_suffix(char ch) {

@@ -26,6 +26,7 @@
 
 &lt;Declarator&gt; ::= &lt;Identifier&gt; 
                 | &lt;Identifier&gt;[&lt;Int-constant&gt;]
+                | &lt;Identifier&gt;[&lt;Long-constant&gt;]
 
 
 &lt;FuncDef&gt; ::= &lt;TypeSpecifier&gt; &lt;Identifier&gt; ( &lt;FormalParaList&gt; ) { &lt;CompoundStatementList&gt; }

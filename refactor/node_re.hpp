@@ -8,10 +8,10 @@
 #define SYNTAXFRONTEND_NODE_RE_HPP
 
 enum NodeType{
-    Program, ExtDefList, ExtVarDef, FuncDef, VarList, FormalParaList, FormalPara,
+    Program, ExtDefList, ExtVarDef, FuncDef, DeclaratorList, FormalParaList, FormalPara,
     CompoundSentenceList, LocalVarDef, WhileStatement,BreakStatement, ContinueStatement,ForStatement,
     SingleExpStatement, ReturnStatement, IfStatement, IfElseStatement,
-    CurlyBraces,
+    CurlyBraces,ArrayDeclarator,
     TokenType
 };
 
@@ -28,6 +28,10 @@ void AddChild(Node *root, Node *child);
 
 // Public
 Node *GetNode();
+
+Node *GetNode(enum NodeType type);
+
+Node *GetNode(Token *token);
 
 // Public
 // 递归删除结点
