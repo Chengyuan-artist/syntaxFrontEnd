@@ -576,6 +576,9 @@ Node *expression(Parser *parser) {
 
             if (precede(token->type, last_op->type)) { // 运算符优先级高于栈顶运算符
                 opT.push(token);
+                token = NextToken(parser->token_list);
+                need_operand = 1;
+
             } else { // 运算符优先级低于栈顶运算符
                 Node *r_operand = opRand.top();
                 opRand.pop();
@@ -598,11 +601,12 @@ Node *expression(Parser *parser) {
                     }
                 }
 
+                // 不读入新的
                 opRand.push(new_operand);
+                need_operand = 0;
             }
 
-            need_operand = 1;
-            token = NextToken(parser->token_list);
+
 
         } else { // token为合法的其他字符->对应操作数
 
