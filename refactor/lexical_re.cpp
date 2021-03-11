@@ -6,10 +6,10 @@
 
 char token_type_string[50][30] = {
         "ERROR_TOKEN", "Identifier", "INT_CONST", "LONG_CONST", "FLOAT_CONST", "CHAR_CONST",
-        "int", "long", "float", "double", "char", "if", "else", "while", "for", "return", "break",
+        "int ", "long ", "float ", "double ", "char ", "if", "else", "while", "for", "return", "break",
         "continue",
         "[", "]", "{", "}", ";", ",",
-        "=", "(", ")", "&&", "||", "+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">", ">=",
+        " = ", "(", ")", " && ", " || ", " + ", " - ", " * ", " / ", " % ", " == ", " != ", " < ", " <= ", " > ", " >= ",
         "Begin_Op",
         "Eof", "#include", "#define","Annotation"
 };

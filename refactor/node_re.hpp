@@ -19,7 +19,7 @@ enum NodeType{
 typedef struct Node{
     enum NodeType type;
     Token *token;
-    Token *annotation;
+    TokenList *annotation_list;
     Node* children[4];
     int child_num;
 }Node;

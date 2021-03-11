@@ -35,7 +35,7 @@ void RecordError(Parser *parser, int error_row,
                  enum NodeType error_pos,
                  enum ErrorType error_type);
 
-void Format(Parser *parser);
+void Format(Parser *parser, char *filename);
 
 void visit(Node *root, int layer);
 

@@ -10,8 +10,10 @@
 using namespace std;
 int main(){
     Parser *parser = GetParser("test.c");
-    PreProcess(parser);
+    LexicalAnalyse(parser);
     Parsing(parser);
+
+    Format(parser, "out.c");
     visit(parser->root, 0);
     return 0;
 }
