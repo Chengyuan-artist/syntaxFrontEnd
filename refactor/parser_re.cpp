@@ -60,7 +60,7 @@ void Parsing(Parser *parser) {
     parser->root = program(parser);
 
     if (parser->error) {
-        printf("%s: %s: in line %d\n", ToString(parser->error_pos),
+        printf("%s: %s: %s, in line %d\n", parser->filename, ToString(parser->error_pos),
                ToString(parser->error_type),
                parser->error_row);
     }
@@ -76,6 +76,8 @@ void LexicalAnalyse(Parser *parser) {
     }
 
     parser->token_list = GetTokenList(in);
+
+    fclose(in);
     // token error catch
 
     TokenList *list = parser->token_list;
@@ -104,6 +106,9 @@ void displayAllToken(Parser *parser) {
             || token->type == INCLUDE
             || token->type == DEFINE) {
             printf("\t%s\n", token->text);
+        }
+        if (token->type == Annotation){
+            printf("%s\n", token->text);
         }
     }
 }
@@ -139,6 +144,7 @@ Node *extDefList(Parser *parser) {
 Node *extDef(Parser *parser) {
     CHECK_ERROR
     // 判断区分变量定义与函数定义
+    Node *root = GetNode();
 
     Token *token = CurrentToken(parser->token_list);
 
@@ -975,20 +981,32 @@ void PreProcess(Parser *parser) {
             int tmp_len = new_parser->token_list->len;
             parser->token_list = InsertList(parser->token_list, new_parser->token_list, i);
 
-
-            i += (tmp_len - 1 );
+            // 由于删除了原token列表的一个元素，因此减一 理解
+            i--;
+            i += tmp_len;
             free(new_parser);
             continue;
         }
 
         if (token->type == DEFINE) {
             DeleteToken(parser->token_list, i); // 直接删除处理
+            i--;
+            continue;
+        }
+
+        if (token->type == Annotation){
+            DeleteToken(parser->token_list, i); // 直接删除处理
+            i--;
             continue;
         }
     }
 }
 
 void Format(Parser *parser) {
+    if (parser->root == nullptr) return;
+
+    // 语法树已经成功建立
+    // format 不应预处理
 
 
 }

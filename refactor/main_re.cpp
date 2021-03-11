@@ -11,6 +11,7 @@ using namespace std;
 int main(){
     Parser *parser = GetParser("test.c");
     PreProcess(parser);
-
+    Parsing(parser);
+    visit(parser->root, 0);
     return 0;
 }

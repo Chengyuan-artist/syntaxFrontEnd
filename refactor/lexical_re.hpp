@@ -18,11 +18,11 @@ enum TokenType {
     LSP, RSP, LCP, RCP, SEMI, COMMA,
     ASSIGN, LP, RP, AndAnd, OrOr, PLUS, MINUS, MULTIPLY, DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige,
     Begin_Op,
-    Eof, INCLUDE, DEFINE,
+    Eof, INCLUDE, DEFINE, Annotation
 };
 
 
-#define Token_Text_Max_Len 20
+#define Token_Text_Max_Len 500
 
 typedef struct Token {
     enum TokenType type;
@@ -50,6 +50,12 @@ TokenList* getTokenList();
 TokenList* InsertList(TokenList *target_list, TokenList *insert_list, int insert_pos);
 
 int DeleteToken(TokenList *list, int delete_pos);
+
+// 仅仅删除TokenList,不释放所指的token
+int DeleteTokenList(TokenList *list);
+
+// 真删除
+int ReleaseTokenList(TokenList *list);
 
 void AddToken(TokenList *token_list, Token *token);
 

@@ -11,7 +11,7 @@ char token_type_string[50][30] = {
         "[", "]", "{", "}", ";", ",",
         "=", "(", ")", "&&", "||", "+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">", ">=",
         "Begin_Op",
-        "Eof", "#include", "#define",
+        "Eof", "#include", "#define","Annotation"
 };
 
 char *ToString(enum TokenType type){
@@ -21,7 +21,7 @@ char *ToString(enum TokenType type){
 #define keyword_num 12
 char keyword[20][10] = {"int", "long", "float", "double", "char", "if", "else", "while", "for", "return", "break",
                         "continue",};
-char token_text[50];
+char token_text[500];
 int token_text_len = 0;
 int then_row = 1; // 当前行数
 
@@ -66,7 +66,8 @@ Token *GetToken(FILE *fp) {
         || token->type == LONG_CONST
         || token->type == CHAR_CONST
         || token->type == INCLUDE
-        || token->type == DEFINE) {
+        || token->type == DEFINE
+        || token->type == Annotation) {
         strcpy(token->text, token_text);
     }
 
@@ -81,6 +82,7 @@ Token *GetToken(FILE *fp) {
 }
 
 TokenList *GetTokenList(FILE *in) {
+    then_row = 0;
     TokenList *tokenList = getTokenList();
 
     Token *token = GetToken(in);
@@ -291,6 +293,34 @@ TokenType gettoken(FILE *fp) {
         case '*':
             return MULTIPLY;
         case '/':
+            ch = fgetc(fp);
+            if (ch == '/') {
+                ungetc(ch, fp);
+                ungetc(ch ,fp);
+                fgets(token_text, 50, fp);
+                then_row ++;
+                return Annotation;
+            }
+            if (ch == '*') {
+                token_text[token_text_len++] = '/';
+                token_text[token_text_len++] = '*';
+                ch = getc(fp);
+                char ch_next = getc(fp);
+                while (ch != '*' || ch_next != '/'){
+
+                    token_text[token_text_len++] = ch;
+
+                    if (ch == '\n') then_row++;
+                    if (ch_next == EOF) return ERROR_TOKEN;
+                    ch = ch_next;
+                    ch_next = getc(fp);
+                }
+                token_text[token_text_len++] = ch;
+                token_text[token_text_len++] = ch_next;
+                token_text[token_text_len] = '\0';
+
+                return Annotation;
+            }
             return DIVIDE;
         case '%':
             return MOD;
@@ -456,6 +486,10 @@ TokenList *InsertList(TokenList *target_list, TokenList *insert_list, int insert
         AddToken(new_list, TokenAt(target_list, i));
     }
 
+    // 假删除
+    DeleteTokenList(target_list);
+    DeleteTokenList(insert_list);
+
     return new_list;
 }
 
@@ -464,9 +498,31 @@ int DeleteToken(TokenList *list, int delete_pos) {
         return 0;
     }
     list->len--;
+    // really release the token
+    // 防止内存泄漏
+    Token *token = TokenAt(list, delete_pos);
+    free(token);
     for (int i = delete_pos; i < list->len; ++i) {
         list->val[i] = list->val[i+1];
     }
+    return 1;
+}
+
+int DeleteTokenList(TokenList *list) {
+    if (list == nullptr) return 0;
+    free(list->val);
+    free(list);
+    return 1;
+}
+
+int ReleaseTokenList(TokenList *list) {
+    if (list == nullptr) return 0;
+    Token *token;
+    for (int i = 0; i < list->len; ++i) {
+        token = TokenAt(list, i);
+        free(token);
+    }
+    DeleteTokenList(list);
     return 1;
 }
 
