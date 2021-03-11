@@ -8,10 +8,10 @@
 #define SYNTAXFRONTEND_NODE_RE_HPP
 
 enum NodeType{
-    NoType, Program, ExtDefList, ExtVarDef, FuncDef, DeclaratorList, FormalParaList, FormalPara,
+    NoType, Program, ExtDef,ExtDefList, ExtVarDef, FuncDef, DeclaratorList, FormalParaList, FormalPara,
     CompoundSentenceList, LocalVarDef, WhileStatement,BreakStatement, ContinueStatement,ForStatement,
     SingleExpStatement, ReturnStatement, IfStatement, IfElseStatement,
-    CurlyBraces, Parentheses, ArrayDeclarator, Array, Function,Expression,
+    CurlyBraces, Parentheses, ArrayDeclarator, ArrayCall, FunctionCall,Expression,
     ArgumentsList,
     TokenType
 };

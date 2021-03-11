@@ -15,7 +15,6 @@ int main(){
     LexicalAnalyse(parser);
     Parsing(parser);
 
-
     visit(parser->root, 0);
 //    char *a = ToString(LCP), *b = ToString(PLUS);
 //    printf("%s %s", ToString(LCP), b);

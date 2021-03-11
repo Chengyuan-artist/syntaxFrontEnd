@@ -10,19 +10,33 @@
 #ifndef SYNTAXFRONTEND_PARSER_HPP
 #define SYNTAXFRONTEND_PARSER_RE_HPP
 
-typedef struct Parser{
+enum ErrorType {
+    Token_Error, Need_Specifier,Need_Identifier,
+    Need_Semi, Brackets_Not_Match, Type_Not_Match,
+    Form_Not_Match, Illegal_Lvalue,Function_Def_Not_Allowed,Else_No_Match
+};
+
+char *ToString(enum ErrorType type);
+
+typedef struct Parser {
     FILE *in;
     TokenList *token_list;
     Node *root;
 
     int error;
-    enum ErrorType{
+    int error_row;
+    enum ErrorType error_type;
+    enum NodeType error_pos;
 
-    }error_type;
+} Parser;
 
-}Parser;
+void RecordError(Parser *parser, int error_row,
+                 enum NodeType error_pos,
+                 enum ErrorType error_type);
+
 
 void visit(Node *root, int layer);
+
 void indent(int layer);
 
 Parser *GetParser(FILE *fp);

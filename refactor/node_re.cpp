@@ -5,7 +5,7 @@
 #include "node_re.hpp"
 
 char node_type_string[40][30] = {
-        "NoType", "Program", "ExtDefList","ExtVarDef","FuncDef", "DeclaratorList", "FormalParaList", "FormalPara",
+        "NoType", "Program","ExtDef", "ExtDefList","ExtVarDef","FuncDef", "DeclaratorList", "FormalParaList", "FormalPara",
         "CompoundSentenceList", "LocalVarDef", "WhileStatement","BreakStatement", "ContinueStatement","ForStatement",
         "SingleExpStatement", "ReturnStatement", "IfStatement", "IfElseStatement",
         "CurlyBraces", "Parentheses", "ArrayDeclarator", "Array", "Function","Expression",

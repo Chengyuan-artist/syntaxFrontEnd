@@ -8,23 +8,78 @@
 #define REPORT_ERROR_AND_RETURN parser->error = 1;return nullptr;
 #define CHECK_ERROR if(parser->error)return nullptr;
 
+#include <stack>
 
-Parser *GetParser(FILE *fp){
-    Parser *parser = (Parser *)malloc(sizeof(Parser));
-    memset(parser, 0 , sizeof(Parser));
+using namespace std;
+
+#define Set_Max_Size 40
+#define Exp_Legal_Token_Set_Len 20
+#define Operator_Set_Len 14
+
+enum TokenType exp_legal_token_set[Set_Max_Size] =
+        {
+                ASSIGN, LP, AndAnd, OrOr, PLUS, MINUS, MULTIPLY,
+                DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige, Identifier,
+                INT_CONST, LONG_CONST, FLOAT_CONST, CHAR_CONST,
+        };
+
+enum TokenType operator_set[Set_Max_Size] =
+        {
+                ASSIGN, AndAnd, OrOr, PLUS, MINUS, MULTIPLY,
+                DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige,
+        };
+
+char error_type_string[20][30] = {
+        "Token_Error", "Need_Specifier", "Need_Identifier",
+        "Need_Semi", "Brackets_Not_Match", "Type_Not_Match",
+        "Form_Not_Match", "Illegal_Lvalue", "Function_Def_Not_Allowed",
+        "Else_No_Match",
+};
+
+char *ToString(enum ErrorType type) {
+    return error_type_string[type];
+}
+
+int isElemInSet(enum TokenType elem, const enum TokenType *set, int len) {
+    for (int i = 0; i < len; ++i) {
+        if (elem == set[i]) return 1;
+    }
+    return 0;
+}
+
+
+Parser *GetParser(FILE *fp) {
+    Parser *parser = (Parser *) malloc(sizeof(Parser));
+    memset(parser, 0, sizeof(Parser));
     parser->in = fp;
     return parser;
 }
 
-void Parsing(Parser *parser){
+void Parsing(Parser *parser) {
     if (parser->token_list == nullptr) return;
     parser->root = program(parser);
+
+    if (parser->error) {
+        printf("%s: %s: in line %d\n", ToString(parser->error_pos),
+               ToString(parser->error_type),
+               parser->error_row);
+    }
 }
 
 void LexicalAnalyse(Parser *parser) {
     parser->token_list = GetTokenList(parser->in);
-
     // token error catch
+
+    TokenList *list = parser->token_list;
+    Token *token;
+    for (int i = 0; i < parser->token_list->len; ++i) {
+        token = TokenAt(list, i);
+        if (token->type == ERROR_TOKEN) {
+            printf("%s : at line %d\n", ToString(ERROR_TOKEN), token->then_row);
+            parser->error = 1;
+            parser->error_type = Token_Error;
+        }
+    }
 }
 
 Node *program(Parser *parser) {
@@ -63,12 +118,16 @@ Node *extDef(Parser *parser) {
 
     // 如果 token 不是类型说明符
     if (token->type < INT || token->type > CHAR) {
+
+        RecordError(parser, token->then_row, ExtDef, Need_Specifier);
         REPORT_ERROR_AND_RETURN
     }
 
     token = NextToken(parser->token_list);
 
     if (token->type != Identifier) {
+
+        RecordError(parser, token->then_row, ExtDef, Need_Identifier);
         REPORT_ERROR_AND_RETURN;
     }
 
@@ -114,12 +173,14 @@ Node *funcDef(Parser *parser) {
     Token *token = NextToken(parser->token_list);
 
     if (token->type == SEMI) {
+        NextToken(parser->token_list);
         return root;
     }
 
     // 花括号交由func判断
     if (token->type != LCP) {
         DeleteNode(root);
+        RecordError(parser, token->then_row, FuncDef, Need_Semi);
         REPORT_ERROR_AND_RETURN
     }
 
@@ -147,6 +208,8 @@ Node *declaratorList(Parser *parser) {
         if (token->type != Identifier) {
             // error
             DeleteNode(root);
+
+            RecordError(parser, token->then_row, DeclaratorList, Need_Specifier);
             REPORT_ERROR_AND_RETURN
         }
 
@@ -158,7 +221,14 @@ Node *declaratorList(Parser *parser) {
         NextToken(parser->token_list);
         return root;
     }
+    if (token->type == LP) {
+        DeleteNode(root);
+        RecordError(parser, token->then_row, DeclaratorList, Function_Def_Not_Allowed);
+        REPORT_ERROR_AND_RETURN
+    }
 
+    DeleteNode(root);
+    RecordError(parser, token->then_row, DeclaratorList, Need_Semi);
     REPORT_ERROR_AND_RETURN
 }
 
@@ -189,10 +259,12 @@ Node *declarator(Parser *parser) {
                 return root;
             } else {
                 DeleteNode(root);
+                RecordError(parser, token->then_row, ArrayDeclarator, Brackets_Not_Match);
                 REPORT_ERROR_AND_RETURN
             }
         } else {
             DeleteNode(root);
+            RecordError(parser, token->then_row, ArrayDeclarator, Type_Not_Match);
             REPORT_ERROR_AND_RETURN
         }
     }
@@ -226,6 +298,7 @@ Node *formalParaList(Parser *parser) {
 
         if (token->type < INT || token->type > CHAR) {
             // 确保 etc. int func(int a,) 不合法
+            RecordError(parser, token->then_row, FormalParaList, Form_Not_Match);
             REPORT_ERROR_AND_RETURN
         }
 
@@ -237,6 +310,7 @@ Node *formalParaList(Parser *parser) {
     }
 
     DeleteNode(root);
+    RecordError(parser, token->then_row, ArrayDeclarator, Brackets_Not_Match);
     REPORT_ERROR_AND_RETURN
 }
 
@@ -246,6 +320,7 @@ Node *formalPara(Parser *parser) {
     Token *token = CurrentToken(parser->token_list);
     // 如果不是类型说明符
     if (token->type < INT || token->type > CHAR) {
+        RecordError(parser, token->then_row, FormalPara, Need_Specifier);
         REPORT_ERROR_AND_RETURN
     }
     Node *root = GetNode(FormalPara);
@@ -259,6 +334,7 @@ Node *formalPara(Parser *parser) {
     token = NextToken(parser->token_list);
     if (token->type != Identifier) {
         DeleteNode(root);
+        RecordError(parser, token->then_row, FormalPara, Need_Identifier);
         REPORT_ERROR_AND_RETURN
     }
 
@@ -272,6 +348,11 @@ Node *formalPara(Parser *parser) {
 Node *compoundStatementList(Parser *parser) {
     CHECK_ERROR
     Token *token = CurrentToken(parser->token_list);
+
+    if (token->type == Eof) {
+        RecordError(parser, token->then_row, CompoundSentenceList, Brackets_Not_Match);
+        REPORT_ERROR_AND_RETURN
+    }
 
     if (token->type == RCP) {
         NextToken(parser->token_list); // 消耗掉右花括号
@@ -317,6 +398,7 @@ Node *localVarDef(Parser *parser) {
     Token *token = NextToken(parser->token_list);
 
     if (token->type != Identifier){
+        RecordError(parser, token->then_row, LocalVarDef, Need_Identifier);
         REPORT_ERROR_AND_RETURN
     }
     NextToken(parser->token_list);
@@ -342,6 +424,7 @@ Node *statement(Parser *parser) {
             token = CurrentToken(parser->token_list);
             if (token->type != SEMI) {
                 DeleteNode(root);
+                RecordError(parser, token->then_row, ReturnStatement, Need_Semi);
                 REPORT_ERROR_AND_RETURN
             }
             token = NextToken(parser->token_list); // 消耗掉分号
@@ -352,6 +435,7 @@ Node *statement(Parser *parser) {
             token = NextToken(parser->token_list);
             if (token->type != LP) {
                 DeleteNode(root);
+                RecordError(parser, token->then_row, IfStatement, Form_Not_Match);
                 REPORT_ERROR_AND_RETURN
             }
 
@@ -362,6 +446,7 @@ Node *statement(Parser *parser) {
             token = CurrentToken(parser->token_list);
             if (token->type != RP) {
                 DeleteNode(root);
+                RecordError(parser, token->then_row, IfStatement, Brackets_Not_Match);
                 REPORT_ERROR_AND_RETURN
             }
 
@@ -390,6 +475,7 @@ Node *statement(Parser *parser) {
             token = NextToken(parser->token_list);
             if (token->type != LP) {
                 DeleteNode(root);
+                RecordError(parser, token->then_row, WhileStatement, Form_Not_Match);
                 REPORT_ERROR_AND_RETURN
             }
 
@@ -400,6 +486,7 @@ Node *statement(Parser *parser) {
             token = CurrentToken(parser->token_list);
             if (token->type != RP) {
                 DeleteNode(root);
+                RecordError(parser, token->then_row, WhileStatement, Brackets_Not_Match);
                 REPORT_ERROR_AND_RETURN
             }
 
@@ -413,6 +500,7 @@ Node *statement(Parser *parser) {
             token = NextToken(parser->token_list);
             if (token->type != LP) {
                 DeleteNode(root);
+                RecordError(parser, token->then_row, ForStatement, Form_Not_Match);
                 REPORT_ERROR_AND_RETURN
             }
 
@@ -428,6 +516,7 @@ Node *statement(Parser *parser) {
                         continue;
                     } else{
                         DeleteNode(root);
+                        RecordError(parser, token->then_row, ForStatement, Need_Semi);
                         REPORT_ERROR_AND_RETURN
                     }
                 }
@@ -446,6 +535,7 @@ Node *statement(Parser *parser) {
             token = CurrentToken(parser->token_list);
             if (token->type != RP) {
                 DeleteNode(root);
+                RecordError(parser, token->then_row, ForStatement, Brackets_Not_Match);
                 REPORT_ERROR_AND_RETURN
             }
 
@@ -458,6 +548,7 @@ Node *statement(Parser *parser) {
             root->type = BreakStatement;
             token = NextToken(parser->token_list);
             if (token->type != SEMI) {
+                RecordError(parser, token->then_row, BreakStatement, Need_Semi);
                 REPORT_ERROR_AND_RETURN
             }
             NextToken(parser->token_list);
@@ -467,6 +558,7 @@ Node *statement(Parser *parser) {
             root->type = ContinueStatement;
             token = NextToken(parser->token_list);
             if (token->type != SEMI) {
+                RecordError(parser, token->then_row, ContinueStatement, Need_Semi);
                 REPORT_ERROR_AND_RETURN
             }
             NextToken(parser->token_list);
@@ -481,6 +573,11 @@ Node *statement(Parser *parser) {
 
             break;
 
+        case ELSE:
+            DeleteNode(root);
+            RecordError(parser, token->then_row, IfElseStatement, Else_No_Match);
+            REPORT_ERROR_AND_RETURN
+
         default:
             root->type = SingleExpStatement;
             AddChild(root, expression(parser));
@@ -488,6 +585,7 @@ Node *statement(Parser *parser) {
             token = CurrentToken(parser->token_list);
             if (token->type != SEMI) {
                 DeleteNode(root);
+                RecordError(parser, token->then_row, SingleExpStatement, Need_Semi);
                 REPORT_ERROR_AND_RETURN
             }
             NextToken(parser->token_list);
@@ -500,33 +598,7 @@ Node *statement(Parser *parser) {
 
 }
 
-#include <stack>
 
-using namespace std;
-
-#define Set_Max_Size 40
-#define Exp_Legal_Token_Set_Len 20
-#define Operator_Set_Len 14
-
-enum TokenType exp_legal_token_set[Set_Max_Size] =
-        {
-                ASSIGN, LP, AndAnd, OrOr, PLUS, MINUS, MULTIPLY,
-                DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige, Identifier,
-                INT_CONST, LONG_CONST, FLOAT_CONST, CHAR_CONST,
-        };
-
-enum TokenType operator_set[Set_Max_Size] =
-        {
-                ASSIGN, AndAnd, OrOr, PLUS, MINUS, MULTIPLY,
-                DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige,
-        };
-
-int isElemInSet(enum TokenType elem, const enum TokenType *set, int len) {
-    for (int i = 0; i < len; ++i) {
-        if (elem == set[i]) return 1;
-    }
-    return 0;
-}
 
 Node *argumentsList(Parser *parser) {
     CHECK_ERROR
@@ -542,7 +614,12 @@ Node *argumentsList(Parser *parser) {
     token = CurrentToken(parser->token_list);
 
     if (token->type == COMMA) {
-        NextToken(parser->token_list);
+        token = NextToken(parser->token_list);
+        if (token->type != Identifier) {
+            // 确保(a,b,)不合法
+            RecordError(parser, token->then_row, ArgumentsList, Form_Not_Match);
+            REPORT_ERROR_AND_RETURN
+        }
         AddChild(root, argumentsList(parser));
     }
 
@@ -569,6 +646,7 @@ Node *expression(Parser *parser) {
         // 若token为操作符
         if (isElemInSet(token->type, operator_set, Operator_Set_Len)) {
             if (need_operand) {
+                RecordError(parser, token->then_row, Expression, Form_Not_Match);
                 REPORT_ERROR_AND_RETURN
             }
 
@@ -593,10 +671,12 @@ Node *expression(Parser *parser) {
 
                 if (token->type == ASSIGN) {
                     if ((l_operand->type == TokenType && l_operand->token->type == Identifier)
-                        || (l_operand->type == Array)) {
+                        || (l_operand->type == ArrayCall)
+                        || (l_operand->type == TokenType && l_operand->token->type == ASSIGN)) {
                         // 可赋值左值 合法
-                    }else {
+                    } else {
                         DeleteNode(new_operand);
+                        RecordError(parser, token->then_row, Expression, Illegal_Lvalue);
                         REPORT_ERROR_AND_RETURN
                     }
                 }
@@ -611,6 +691,7 @@ Node *expression(Parser *parser) {
         } else { // token为合法的其他字符->对应操作数
 
             if (!need_operand) {
+                RecordError(parser, token->then_row, Expression, Form_Not_Match);
                 REPORT_ERROR_AND_RETURN
             }
 
@@ -624,6 +705,7 @@ Node *expression(Parser *parser) {
                 token = CurrentToken(parser->token_list);
                 if (token->type != RP) {
                     // 括号不匹配
+                    RecordError(parser, token->then_row, Expression, Brackets_Not_Match);
                     REPORT_ERROR_AND_RETURN
                 }
 
@@ -645,7 +727,7 @@ Node *expression(Parser *parser) {
 
                     switch (token->type) {
                         case LP:
-                            new_operand->type = Function;
+                            new_operand->type = FunctionCall;
                             AddChild(new_operand, operand_type);
                             NextToken(parser->token_list);
                             AddChild(new_operand, argumentsList(parser));
@@ -653,19 +735,21 @@ Node *expression(Parser *parser) {
                             // 检查右括号
                             token = CurrentToken(parser->token_list);
                             if (token->type != RP) {
+                                RecordError(parser, token->then_row, FunctionCall, Brackets_Not_Match);
                                 REPORT_ERROR_AND_RETURN
                             }
                             token = NextToken(parser->token_list); // 消耗右括号
                             break;
 
                         case LSP:
-                            new_operand->type = Array;
+                            new_operand->type = ArrayCall;
                             AddChild(new_operand, operand_type);
                             NextToken(parser->token_list);
                             AddChild(new_operand, expression(parser));
 
                             token = CurrentToken(parser->token_list);
                             if (token->type != RSP) {
+                                RecordError(parser, token->then_row, ArrayCall, Brackets_Not_Match);
                                 REPORT_ERROR_AND_RETURN
                             }
                             token = NextToken(parser->token_list); // 消耗右方括号
@@ -692,6 +776,7 @@ Node *expression(Parser *parser) {
     CHECK_ERROR
 
     if (need_operand) {
+        RecordError(parser, token->then_row, Expression, Form_Not_Match);
         REPORT_ERROR_AND_RETURN
     }
 
@@ -705,8 +790,21 @@ Node *expression(Parser *parser) {
         Node *l_operand = opRand.top();
         opRand.pop();
 
+
         AddChild(new_operand, l_operand);
         AddChild(new_operand, r_operand);
+
+        if (last_op->type == ASSIGN) {
+            if ((l_operand->type == TokenType && l_operand->token->type == Identifier)
+                || (l_operand->type == ArrayCall)
+                || (l_operand->type == TokenType && l_operand->token->type == ASSIGN)) {
+                // 可赋值左值 合法
+            } else {
+                DeleteNode(new_operand);
+                RecordError(parser, token->then_row, Expression, Illegal_Lvalue);
+                REPORT_ERROR_AND_RETURN
+            }
+        }
 
         opRand.push(new_operand);
     }
@@ -740,10 +838,6 @@ int priority(enum TokenType type) {
     return 16; // Max
 }
 
-void pre_visit(Node *root, int layer) {
-
-}
-
 void visit_expression(Node *root) {
     if (root == nullptr)return;
     if (root->type == Expression) {
@@ -756,21 +850,31 @@ void visit_expression(Node *root) {
         printf("%s", ToString(RP));
         return;
     }
-    if (root->type == Function) {
-        return;
+    if (root->type == ArgumentsList) {
+        visit_expression(root->children[0]);
+        if (root->children[1] != nullptr) {
+            printf(",");
+            visit_expression(root->children[1]);
+        }
+        return; // 一定要return!
+    }
+    if (root->type == FunctionCall) {
+
         // TODO
         visit_expression(root->children[0]);
         printf("%s", ToString(LP));
         visit_expression(root->children[1]);
         printf("%s", ToString(RP));
+
+        return; // 一定要return
     }
-    if (root->type == Array) {
-        return;
-        // TODO
-//        visit_expression(root->children[0]);
-//        printf("%s", ToString(LSP));
-//        visit_expression(root->children[1]);
-//        printf("%s", ToString(RSP));
+    if (root->type == ArrayCall) {
+
+        visit_expression(root->children[0]);
+        printf("%s", ToString(LSP));
+        visit_expression(root->children[1]);
+        printf("%s", ToString(RSP));
+        return; // 一定要return
     }
     visit_expression(root->children[0]);
     if (root->token->type == Identifier || isConstant(root->token->type))
@@ -809,4 +913,12 @@ void indent(int layer) {
     for (int i = 0; i < layer; ++i) {
         printf("%s", "~---");
     }
+}
+
+void RecordError(Parser *parser, int error_row, enum NodeType error_pos, enum ErrorType error_type) {
+    parser->error = 1;
+    parser->error_row = error_row;
+    parser->error_pos = error_pos;
+    parser->error_type = error_type;
+
 }
