@@ -739,3 +739,74 @@ int priority(enum TokenType type) {
 
     return 16; // Max
 }
+
+void pre_visit(Node *root, int layer) {
+
+}
+
+void visit_expression(Node *root) {
+    if (root == nullptr)return;
+    if (root->type == Expression) {
+        visit_expression(root->children[0]);
+        return;
+    }
+    if (root->type == Parentheses) {
+        printf("%s", ToString(LP));
+        visit_expression(root->children[0]);
+        printf("%s", ToString(RP));
+        return;
+    }
+    if (root->type == Function) {
+        return;
+        // TODO
+        visit_expression(root->children[0]);
+        printf("%s", ToString(LP));
+        visit_expression(root->children[1]);
+        printf("%s", ToString(RP));
+    }
+    if (root->type == Array) {
+        return;
+        // TODO
+//        visit_expression(root->children[0]);
+//        printf("%s", ToString(LSP));
+//        visit_expression(root->children[1]);
+//        printf("%s", ToString(RSP));
+    }
+    visit_expression(root->children[0]);
+    if (root->token->type == Identifier || isConstant(root->token->type))
+        printf("%s", root->token->text);
+    else printf("%s", ToString(root->token->type));
+
+    visit_expression(root->children[1]);
+}
+
+void visit(Node *root, int layer) {
+    if (root == nullptr) return;
+    indent(layer);
+    if (root->type == TokenType) {
+        printf("%s", ToString(root->token->type));
+        if (root->token->type == Identifier || root->token->type == INT_CONST) {
+            printf(": %s", root->token->text);
+        }
+        printf("\n");
+    } else {
+        printf("%s\n", ToString(root->type));
+        if (root->type == Expression) {
+            // 中序遍历
+            indent(layer+1);
+            visit_expression(root);
+            printf("\n");
+        } else {
+            // 先序遍历
+            for (int i = 0; i < root->child_num; ++i) {
+                visit(root->children[i], layer + 1);
+            }
+        }
+    }
+}
+
+void indent(int layer) {
+    for (int i = 0; i < layer; ++i) {
+        printf("%s", "~---");
+    }
+}

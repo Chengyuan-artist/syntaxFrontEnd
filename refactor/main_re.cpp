@@ -9,12 +9,15 @@
 #include <iostream>
 using namespace std;
 int main(){
-    FILE *in = fopen("test.in", "r");
-//    Parser *parser = GetParser(in);
-//
-//    LexicalAnalyse(parser);
-//    Parsing(parser);
-    char *a = ToString(IfElseStatement), *b = ToString(PLUS);
-    printf("%s %s", a, b);
+    FILE *in = fopen("test.c", "r");
+    Parser *parser = GetParser(in);
+
+    LexicalAnalyse(parser);
+    Parsing(parser);
+
+
+    visit(parser->root, 0);
+//    char *a = ToString(LCP), *b = ToString(PLUS);
+//    printf("%s %s", ToString(LCP), b);
     return 0;
 }

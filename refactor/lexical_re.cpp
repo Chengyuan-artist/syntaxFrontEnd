@@ -385,8 +385,18 @@ Token *TokenAt(TokenList *list, int index){
 }
 
 Token *GetToken() {
-    Token * token = (Token*)malloc(sizeof(Token));
-    memset(token,0,sizeof(Token));
+    Token *token = (Token *) malloc(sizeof(Token));
+    memset(token, 0, sizeof(Token));
     return token;
+}
+
+int isConstant(enum TokenType type) {
+    if (type == INT_CONST ||
+        type == FLOAT_CONST ||
+        type == CHAR_CONST ||
+        type == LONG_CONST) {
+        return 1;
+    }
+    return 0;
 }
 

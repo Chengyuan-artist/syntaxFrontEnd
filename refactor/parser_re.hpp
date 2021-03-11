@@ -22,6 +22,9 @@ typedef struct Parser{
 
 }Parser;
 
+void visit(Node *root, int layer);
+void indent(int layer);
+
 Parser *GetParser(FILE *fp);
 
 void Parsing(Parser *parser);

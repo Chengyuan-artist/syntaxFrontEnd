@@ -43,6 +43,8 @@ typedef struct TokenList {
 
 char *ToString(enum TokenType type);
 
+int isConstant(enum TokenType type);
+
 TokenList* getTokenList();
 
 void AddToken(TokenList *token_list, Token *token);
