@@ -9,9 +9,9 @@ char token_type_string[50][30] = {
         "int", "long", "float", "double", "char", "if", "else", "while", "for", "return", "break",
         "continue",
         "[", "]", "{", "}", ";", ",",
-        "=", "(", ")", "&&", "||", "+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">",">=",
+        "=", "(", ")", "&&", "||", "+", "-", "*", "/", "%", "==", "!=", "<", "<=", ">", ">=",
         "Begin_Op",
-        "Eof"
+        "Eof", "#include", "#define",
 };
 
 char *ToString(enum TokenType type){
@@ -21,7 +21,7 @@ char *ToString(enum TokenType type){
 #define keyword_num 12
 char keyword[20][10] = {"int", "long", "float", "double", "char", "if", "else", "while", "for", "return", "break",
                         "continue",};
-char token_text[20];
+char token_text[50];
 int token_text_len = 0;
 int then_row = 1; // 当前行数
 
@@ -58,13 +58,15 @@ Token *GetToken(FILE *fp) {
     Token *token = (Token *) malloc(sizeof(Token));
     token->type = gettoken(fp);
     token->then_row = then_row;
-    memset(token->text, 0, sizeof(token_text));
+    memset(token->text, 0, sizeof(token->text));
 
     if (token->type == Identifier
         || token->type == INT_CONST
         || token->type == FLOAT_CONST
         || token->type == LONG_CONST
-        || token->type == CHAR_CONST) {
+        || token->type == CHAR_CONST
+        || token->type == INCLUDE
+        || token->type == DEFINE) {
         strcpy(token->text, token_text);
     }
 
@@ -212,6 +214,43 @@ TokenType gettoken(FILE *fp) {
     }
 
     switch (ch) {
+        case '#':
+            ch = getc(fp);
+            while (isalpha(ch)) {
+                token_text[token_text_len++] = ch;
+                ch = fgetc(fp);
+            }
+            token_text[token_text_len] = '\0';
+            while (ch == ' ') { // 去除空格
+                ch = getc(fp);
+            }
+
+            if (strcmp(token_text, "include") == 0) {
+                if (ch != '\"') {
+                    return ERROR_TOKEN;
+                }
+                token_text_len = 0;
+
+                // puts in a word
+                ch = getc(fp);
+                while (isalpha(ch) || ch == '.' || isdigit(ch)) {
+                    token_text[token_text_len++] = ch;
+                    ch = fgetc(fp);
+                }
+                if (ch != '\"') {
+                    return ERROR_TOKEN;
+                }
+                token_text[token_text_len] = '\0';
+
+                return INCLUDE;
+            }
+            if (strcmp(token_text, "define") == 0) {
+                fgets(token_text, 50, fp);
+                // 有无输出错误？
+                // 已检查
+                return DEFINE;
+            }
+            return ERROR_TOKEN;
         case '(':
             return LP;
         case ')':
@@ -373,6 +412,7 @@ TokenList *getTokenList() {
     token_list->val = (Token **) malloc(sizeof(Token *) * Init_TokenList_Length);
     token_list->len = 0;
     token_list->store_size = Init_TokenList_Length;
+    token_list->then_p = 0;
     return token_list;
 }
 
@@ -398,5 +438,35 @@ int isConstant(enum TokenType type) {
         return 1;
     }
     return 0;
+}
+
+TokenList *InsertList(TokenList *target_list, TokenList *insert_list, int insert_pos) {
+
+    if (insert_pos >= target_list->len) insert_pos = target_list->len;
+
+    TokenList *new_list = getTokenList();
+
+    for (int i = 0; i < insert_pos; ++i) {
+        AddToken(new_list, TokenAt(target_list, i));
+    }
+    for (int i = 0; i < insert_list->len; ++i) {
+        AddToken(new_list, TokenAt(insert_list, i));
+    }
+    for (int i = insert_pos; i < target_list->len; ++i) {
+        AddToken(new_list, TokenAt(target_list, i));
+    }
+
+    return new_list;
+}
+
+int DeleteToken(TokenList *list, int delete_pos) {
+    if (delete_pos< 0 || delete_pos >= list->len) {
+        return 0;
+    }
+    list->len--;
+    for (int i = delete_pos; i < list->len; ++i) {
+        list->val[i] = list->val[i+1];
+    }
+    return 1;
 }
 

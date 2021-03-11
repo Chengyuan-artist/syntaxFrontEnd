@@ -18,7 +18,7 @@ enum TokenType {
     LSP, RSP, LCP, RCP, SEMI, COMMA,
     ASSIGN, LP, RP, AndAnd, OrOr, PLUS, MINUS, MULTIPLY, DIVIDE, MOD, EQ, UEQ, Clt, Cle, Igt, Ige,
     Begin_Op,
-    Eof
+    Eof, INCLUDE, DEFINE,
 };
 
 
@@ -46,6 +46,10 @@ char *ToString(enum TokenType type);
 int isConstant(enum TokenType type);
 
 TokenList* getTokenList();
+
+TokenList* InsertList(TokenList *target_list, TokenList *insert_list, int insert_pos);
+
+int DeleteToken(TokenList *list, int delete_pos);
 
 void AddToken(TokenList *token_list, Token *token);
 

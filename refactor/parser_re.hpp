@@ -43,7 +43,11 @@ Parser *GetParser(FILE *fp);
 
 void Parsing(Parser *parser);
 
+void PreProcess(Parser *parser);
+
 void LexicalAnalyse(Parser *parser);
+
+void displayAllToken(Parser *parser);
 
 Node *program(Parser *parser);
 

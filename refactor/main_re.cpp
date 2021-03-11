@@ -12,11 +12,16 @@ int main(){
     FILE *in = fopen("test.c", "r");
     Parser *parser = GetParser(in);
 
-    LexicalAnalyse(parser);
-    Parsing(parser);
+    PreProcess(parser);
 
+    Parsing(parser);
     visit(parser->root, 0);
-//    char *a = ToString(LCP), *b = ToString(PLUS);
-//    printf("%s %s", ToString(LCP), b);
+
+//    Parsing(parser);
+//
+//    visit(parser->root, 0);
+//    char a[100];
+//    fgets(a, 100, in);
+//    printf("%s", a);
     return 0;
 }

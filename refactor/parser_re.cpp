@@ -82,6 +82,24 @@ void LexicalAnalyse(Parser *parser) {
     }
 }
 
+void displayAllToken(Parser *parser) {
+    if (parser->token_list == nullptr)return;
+    Token *token;
+    for (int i = 0; i < parser->token_list->len; ++i) {
+        token = TokenAt(parser->token_list, i);
+        printf("%d: %s\n", i + 1, ToString(token->type));
+        if (token->type == Identifier
+            || token->type == INT_CONST
+            || token->type == FLOAT_CONST
+            || token->type == LONG_CONST
+            || token->type == CHAR_CONST
+            || token->type == INCLUDE
+            || token->type == DEFINE) {
+            printf("\t%s\n", token->text);
+        }
+    }
+}
+
 Node *program(Parser *parser) {
     Node *root = GetNode(Program);
 
@@ -921,4 +939,50 @@ void RecordError(Parser *parser, int error_row, enum NodeType error_pos, enum Er
     parser->error_pos = error_pos;
     parser->error_type = error_type;
 
+}
+
+void PreProcess(Parser *parser) {
+    LexicalAnalyse(parser);
+
+    if (parser->error) return;
+
+
+    Token *token;
+    for (int i = 0; i < parser->token_list->len; ++i) {
+        token = TokenAt(parser->token_list, i);
+
+        if (token->type == INCLUDE) {
+            FILE *fin = fopen(token->text, "r");
+            if (fin == nullptr) {
+                printf("Include_Error at line %d : fail to open file \"%s\" ",token->then_row,token->text);
+                parser->error = 1;
+                parser->error_type = Token_Error;
+                return;
+            }
+
+            Parser *new_parser = GetParser(fin);
+            PreProcess(new_parser);
+
+            if (new_parser->error || new_parser->token_list == nullptr) {
+                parser->error = 1;
+                return;
+            }
+
+            DeleteToken(parser->token_list, i);
+            DeleteToken(new_parser->token_list, new_parser->token_list->len-1); // 删除Eof
+
+            int tmp_len = new_parser->token_list->len;
+            parser->token_list = InsertList(parser->token_list, new_parser->token_list, i);
+
+
+            i += (tmp_len - 1 );
+            free(new_parser);
+            continue;
+        }
+
+        if (token->type == DEFINE) {
+            DeleteToken(parser->token_list, i); // 直接删除处理
+            continue;
+        }
+    }
 }
