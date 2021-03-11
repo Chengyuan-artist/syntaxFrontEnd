@@ -8,7 +8,7 @@
 #define SYNTAXFRONTEND_NODE_RE_HPP
 
 enum NodeType{
-    Program, ExtDefList, ExtVarDef, FuncDef, DeclaratorList, FormalParaList, FormalPara,
+    NoType, Program, ExtDefList, ExtVarDef, FuncDef, DeclaratorList, FormalParaList, FormalPara,
     CompoundSentenceList, LocalVarDef, WhileStatement,BreakStatement, ContinueStatement,ForStatement,
     SingleExpStatement, ReturnStatement, IfStatement, IfElseStatement,
     CurlyBraces, Parentheses, ArrayDeclarator, Array, Function,Expression,
@@ -23,7 +23,7 @@ typedef struct Node{
     int child_num;
 }Node;
 
-
+char *ToString(enum NodeType type);
 // Public
 void AddChild(Node *root, Node *child);
 

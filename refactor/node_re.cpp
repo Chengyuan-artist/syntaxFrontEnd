@@ -4,6 +4,19 @@
 
 #include "node_re.hpp"
 
+char node_type_string[40][30] = {
+        "NoType", "Program", "ExtDefList","ExtVarDef","FuncDef", "DeclaratorList", "FormalParaList", "FormalPara",
+        "CompoundSentenceList", "LocalVarDef", "WhileStatement","BreakStatement", "ContinueStatement","ForStatement",
+        "SingleExpStatement", "ReturnStatement", "IfStatement", "IfElseStatement",
+        "CurlyBraces", "Parentheses", "ArrayDeclarator", "Array", "Function","Expression",
+        "ArgumentsList",
+        "TokenType"
+};
+
+char *ToString(enum NodeType type) {
+    return node_type_string[type];
+}
+
 void AddChild(Node *root, Node *child) {
     root->children[root->child_num++] = child;
 }

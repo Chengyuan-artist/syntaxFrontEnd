@@ -40,6 +40,9 @@ typedef struct TokenList {
    int then_p;
 } TokenList;
 
+
+char *ToString(enum TokenType type);
+
 TokenList* getTokenList();
 
 void AddToken(TokenList *token_list, Token *token);

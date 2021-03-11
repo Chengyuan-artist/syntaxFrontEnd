@@ -7,13 +7,14 @@
 #include "parser_re.hpp"
 
 #include <iostream>
-
+using namespace std;
 int main(){
     FILE *in = fopen("test.in", "r");
-    Parser *parser = GetParser(in);
-
-    LexicalAnalyse(parser);
-    Parsing(parser);
-
+//    Parser *parser = GetParser(in);
+//
+//    LexicalAnalyse(parser);
+//    Parsing(parser);
+    char *a = ToString(IfElseStatement), *b = ToString(PLUS);
+    printf("%s %s", a, b);
     return 0;
 }
