@@ -13,13 +13,14 @@
 enum ErrorType {
     Token_Error, Need_Specifier,Need_Identifier,
     Need_Semi, Brackets_Not_Match, Type_Not_Match,
-    Form_Not_Match, Illegal_Lvalue,Function_Def_Not_Allowed,Else_No_Match
+    Form_Not_Match, Illegal_Lvalue,Function_Def_Not_Allowed,Else_No_Match,
+    File_Error
 };
 
 char *ToString(enum ErrorType type);
 
 typedef struct Parser {
-    FILE *in;
+    char filename[20];
     TokenList *token_list;
     Node *root;
 
@@ -34,12 +35,13 @@ void RecordError(Parser *parser, int error_row,
                  enum NodeType error_pos,
                  enum ErrorType error_type);
 
+void Format(Parser *parser);
 
 void visit(Node *root, int layer);
 
 void indent(int layer);
 
-Parser *GetParser(FILE *fp);
+Parser *GetParser(char *filename);
 
 void Parsing(Parser *parser);
 

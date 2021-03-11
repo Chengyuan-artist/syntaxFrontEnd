@@ -48,10 +48,10 @@ int isElemInSet(enum TokenType elem, const enum TokenType *set, int len) {
 }
 
 
-Parser *GetParser(FILE *fp) {
+Parser *GetParser(char *filename) {
     Parser *parser = (Parser *) malloc(sizeof(Parser));
     memset(parser, 0, sizeof(Parser));
-    parser->in = fp;
+    strcpy(parser->filename, filename);
     return parser;
 }
 
@@ -67,7 +67,15 @@ void Parsing(Parser *parser) {
 }
 
 void LexicalAnalyse(Parser *parser) {
-    parser->token_list = GetTokenList(parser->in);
+    FILE *in = fopen(parser->filename, "r");
+    if (in == nullptr) {
+        printf("fail to open file \"%s\" \n ",parser->filename);
+        parser->error = 1;
+        parser->error_type = File_Error;
+        return;
+    }
+
+    parser->token_list = GetTokenList(in);
     // token error catch
 
     TokenList *list = parser->token_list;
@@ -952,15 +960,8 @@ void PreProcess(Parser *parser) {
         token = TokenAt(parser->token_list, i);
 
         if (token->type == INCLUDE) {
-            FILE *fin = fopen(token->text, "r");
-            if (fin == nullptr) {
-                printf("Include_Error at line %d : fail to open file \"%s\" ",token->then_row,token->text);
-                parser->error = 1;
-                parser->error_type = Token_Error;
-                return;
-            }
-
-            Parser *new_parser = GetParser(fin);
+            // token->text 保存include的文件名
+            Parser *new_parser = GetParser(token->text);
             PreProcess(new_parser);
 
             if (new_parser->error || new_parser->token_list == nullptr) {
@@ -985,4 +986,9 @@ void PreProcess(Parser *parser) {
             continue;
         }
     }
+}
+
+void Format(Parser *parser) {
+
+
 }
