@@ -92,7 +92,7 @@ void LexicalAnalyse(Parser *parser) {
     }
 }
 
-void displayAllToken(Parser *parser) {
+void DisplayAllToken(Parser *parser) {
     if (parser->token_list == nullptr)return;
     Token *token;
     for (int i = 0; i < parser->token_list->len; ++i) {
@@ -434,7 +434,7 @@ Node *compoundStatement(Parser *parser) {
     } else {
         root = statement(parser);
     }
-    root->annotation_list = annotation_list;
+    if (root!= nullptr) root->annotation_list = annotation_list;
 
     return root;
 }
@@ -737,7 +737,6 @@ Node *expression(Parser *parser) {
 
                 // 不读入新的
                 opRand.push(new_operand);
-                need_operand = 0;
             }
 
 
@@ -1259,7 +1258,14 @@ void format_display(Node *root, int layer, FILE *out) {
             format_display(root->children[0], layer, out);
 
             if (root->token->type == Identifier || isConstant(root->token->type))
-                fprintf(out, "%s", root->token->text);
+            {
+                if (root->token->type == CHAR_CONST){
+                    fprintf(out, "\'%s\'", root->token->text);
+                }else {
+                    fprintf(out, "%s", root->token->text);
+                }
+            }
+
             else fprintf(out, "%s", ToString(root->token->type));
 
             format_display(root->children[1], layer, out);
@@ -1280,4 +1286,9 @@ void Format(Parser *parser, char *filename) {
 
     format_display(parser->root, 0, out);
 
+}
+
+void ReleaseParser(Parser *parser) {
+    ReleaseTokenList(parser->token_list);
+    free(parser);
 }

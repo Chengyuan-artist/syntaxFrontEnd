@@ -6,14 +6,20 @@
 #include "lexical_re.hpp"
 #include "parser_re.hpp"
 
-#include <iostream>
 using namespace std;
 int main(){
     Parser *parser = GetParser("test.c");
+
     LexicalAnalyse(parser);
+//    PreProcess(parser);
+
+//    DisplayAllToken(parser);
+
     Parsing(parser);
 
     Format(parser, "out.c");
-    visit(parser->root, 0);
+
+    ReleaseParser(parser);
+
     return 0;
 }

@@ -82,7 +82,7 @@ Token *GetToken(FILE *fp) {
 }
 
 TokenList *GetTokenList(FILE *in) {
-    then_row = 0;
+    then_row = 1;
     TokenList *tokenList = getTokenList();
 
     Token *token = GetToken(in);
@@ -243,13 +243,13 @@ TokenType gettoken(FILE *fp) {
                     return ERROR_TOKEN;
                 }
                 token_text[token_text_len] = '\0';
-
                 return INCLUDE;
             }
             if (strcmp(token_text, "define") == 0) {
                 fgets(token_text, 50, fp);
                 // 有无输出错误？
                 // 已检查
+                then_row++;
                 return DEFINE;
             }
             return ERROR_TOKEN;
@@ -322,6 +322,7 @@ TokenType gettoken(FILE *fp) {
 
                 return Annotation;
             }
+            ungetc(ch,fp);
             return DIVIDE;
         case '%':
             return MOD;

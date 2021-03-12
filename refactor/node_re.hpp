@@ -26,13 +26,17 @@ typedef struct Node{
 
 char *ToString(enum NodeType type);
 // Public
+// Node 的成员函数， 为root添加孩子child
 void AddChild(Node *root, Node *child);
 
 // Public
+// Node 的成员函数， 相当于 new Node
 Node *GetNode();
 
+// 使用NodeType初始化Node
 Node *GetNode(enum NodeType type);
 
+// 使用Token初始化Node
 Node *GetNode(Token *token);
 
 // Public
