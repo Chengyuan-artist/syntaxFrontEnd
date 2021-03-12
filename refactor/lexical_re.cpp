@@ -317,6 +317,7 @@ TokenType gettoken(FILE *fp) {
                 }
                 token_text[token_text_len++] = ch;
                 token_text[token_text_len++] = ch_next;
+                token_text[token_text_len++] = '\n';
                 token_text[token_text_len] = '\0';
 
                 return Annotation;

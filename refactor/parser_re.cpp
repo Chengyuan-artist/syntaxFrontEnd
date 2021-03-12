@@ -1037,11 +1037,18 @@ void format_display(Node *root, int layer, FILE *out) {
     if (root->annotation_list != nullptr && root->annotation_list->len > 0) {
         for (int i = 0; i < root->annotation_list->len; ++i) {
             Token *token = TokenAt(root->annotation_list, i);
+            formal_indent(layer, out);
             if (token->type == INCLUDE) {
                 fprintf(out, "#include \"%s\"\n", token->text);
-            } else fprintf(out, "%s", token->text);
+                continue;
+            }
+            if (token->type == DEFINE) {
+                fprintf(out, "#define %s", token->text);
+                continue;
+            }
+            fprintf(out, "%s", token->text);
         }
-        fprintf(out, "\n");
+//        fprintf(out, "\n");
     }
 
 //    formal_indent(layer, out);
@@ -1138,13 +1145,13 @@ void format_display(Node *root, int layer, FILE *out) {
         case ForStatement:
             formal_indent(layer, out);
             fprintf(out, "for");
-            fprintf(out, "(");
+            fprintf(out, "( ");
             format_display(root->children[0], layer, out);
             fprintf(out, "; ");
             format_display(root->children[1], layer, out);
             fprintf(out, "; ");
             format_display(root->children[2], layer, out);
-            fprintf(out, ")");
+            fprintf(out, " )");
             format_display(root->children[3], layer, out);
             break;
 
@@ -1167,7 +1174,12 @@ void format_display(Node *root, int layer, FILE *out) {
             fprintf(out, "(");
             format_display(root->children[0], layer, out);
             fprintf(out, ")");
-            format_display(root->children[1], layer, out);
+            if (root->children[1]->type == CurlyBraces) {
+                format_display(root->children[1], layer, out);
+            } else {
+                fprintf(out, "\n");
+                format_display(root->children[1], layer + 1, out);
+            }
             break;
 
         case IfElseStatement:
@@ -1191,7 +1203,7 @@ void format_display(Node *root, int layer, FILE *out) {
                 format_display(root->children[2], layer, out);
             } else {
                 fprintf(out, "\n");
-                format_display(root->children[1], layer + 1, out);
+                format_display(root->children[2], layer + 1, out);
             }
             break;
 
