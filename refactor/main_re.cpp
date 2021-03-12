@@ -6,17 +6,20 @@
 #include "lexical_re.hpp"
 #include "parser_re.hpp"
 
-#include <iostream>
 using namespace std;
 int main(){
-    FILE *in = fopen("test.c", "r");
-    Parser *parser = GetParser(in);
+    Parser *parser = GetParser("test.c");
 
     LexicalAnalyse(parser);
+//    PreProcess(parser);
+
+//    DisplayAllToken(parser);
+
     Parsing(parser);
 
-    visit(parser->root, 0);
-//    char *a = ToString(LCP), *b = ToString(PLUS);
-//    printf("%s %s", ToString(LCP), b);
+    Format(parser, "out.c");
+
+    ReleaseParser(parser);
+
     return 0;
 }

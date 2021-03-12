@@ -48,10 +48,10 @@ int isElemInSet(enum TokenType elem, const enum TokenType *set, int len) {
 }
 
 
-Parser *GetParser(FILE *fp) {
+Parser *GetParser(char *filename) {
     Parser *parser = (Parser *) malloc(sizeof(Parser));
     memset(parser, 0, sizeof(Parser));
-    parser->in = fp;
+    strcpy(parser->filename, filename);
     return parser;
 }
 
@@ -60,14 +60,24 @@ void Parsing(Parser *parser) {
     parser->root = program(parser);
 
     if (parser->error) {
-        printf("%s: %s: in line %d\n", ToString(parser->error_pos),
+        printf("%s: %s: %s, in line %d\n", parser->filename, ToString(parser->error_pos),
                ToString(parser->error_type),
                parser->error_row);
     }
 }
 
 void LexicalAnalyse(Parser *parser) {
-    parser->token_list = GetTokenList(parser->in);
+    FILE *in = fopen(parser->filename, "r");
+    if (in == nullptr) {
+        printf("fail to open file \"%s\" \n ",parser->filename);
+        parser->error = 1;
+        parser->error_type = File_Error;
+        return;
+    }
+
+    parser->token_list = GetTokenList(in);
+
+    fclose(in);
     // token error catch
 
     TokenList *list = parser->token_list;
@@ -78,6 +88,27 @@ void LexicalAnalyse(Parser *parser) {
             printf("%s : at line %d\n", ToString(ERROR_TOKEN), token->then_row);
             parser->error = 1;
             parser->error_type = Token_Error;
+        }
+    }
+}
+
+void DisplayAllToken(Parser *parser) {
+    if (parser->token_list == nullptr)return;
+    Token *token;
+    for (int i = 0; i < parser->token_list->len; ++i) {
+        token = TokenAt(parser->token_list, i);
+        printf("%d: %s\n", i + 1, ToString(token->type));
+        if (token->type == Identifier
+            || token->type == INT_CONST
+            || token->type == FLOAT_CONST
+            || token->type == LONG_CONST
+            || token->type == CHAR_CONST
+            || token->type == INCLUDE
+            || token->type == DEFINE) {
+            printf("\t%s\n", token->text);
+        }
+        if (token->type == Annotation){
+            printf("%s\n", token->text);
         }
     }
 }
@@ -115,6 +146,12 @@ Node *extDef(Parser *parser) {
     // 判断区分变量定义与函数定义
 
     Token *token = CurrentToken(parser->token_list);
+    TokenList *annotation_list = getTokenList();
+
+    while (token->type == Annotation || token->type == DEFINE || token->type == INCLUDE) {
+        AddToken(annotation_list, token);
+        token = NextToken(parser->token_list);
+    }
 
     // 如果 token 不是类型说明符
     if (token->type < INT || token->type > CHAR) {
@@ -133,10 +170,14 @@ Node *extDef(Parser *parser) {
 
     token = NextToken(parser->token_list);
 
+    Node *root;
     if (token->type == LP) {
-        return funcDef(parser);
-    } else return extVarDef(parser);
+        root = funcDef(parser);
+    } else root = extVarDef(parser);
 
+    root->annotation_list = annotation_list;
+
+    return root;
 }
 
 Node *extVarDef(Parser *parser) {
@@ -377,12 +418,25 @@ Node *compoundStatementList(Parser *parser) {
 Node *compoundStatement(Parser *parser) {
     CHECK_ERROR
     Token *token = CurrentToken(parser->token_list);
+
+    // 注释预定义处理
+    TokenList *annotation_list = getTokenList();
+    while (token->type == Annotation || token->type == DEFINE || token->type == INCLUDE) {
+        AddToken(annotation_list, token);
+        token = NextToken(parser->token_list);
+    }
+
+    Node *root;
+
     if (token->type >= INT && token->type <= CHAR) {
         // 是 <类型说明符>
-        return localVarDef(parser);
+        root = localVarDef(parser);
     } else {
-        return statement(parser);
+        root = statement(parser);
     }
+    if (root!= nullptr) root->annotation_list = annotation_list;
+
+    return root;
 }
 
 // <局部变量定义> ::= <类型说明符> <变量序列>;
@@ -683,7 +737,6 @@ Node *expression(Parser *parser) {
 
                 // 不读入新的
                 opRand.push(new_operand);
-                need_operand = 0;
             }
 
 
@@ -921,4 +974,321 @@ void RecordError(Parser *parser, int error_row, enum NodeType error_pos, enum Er
     parser->error_pos = error_pos;
     parser->error_type = error_type;
 
+}
+
+void PreProcess(Parser *parser) {
+    LexicalAnalyse(parser);
+
+    if (parser->error) return;
+
+
+    Token *token;
+    for (int i = 0; i < parser->token_list->len; ++i) {
+        token = TokenAt(parser->token_list, i);
+
+        if (token->type == INCLUDE) {
+            // token->text 保存include的文件名
+            Parser *new_parser = GetParser(token->text);
+            PreProcess(new_parser);
+
+            if (new_parser->error || new_parser->token_list == nullptr) {
+                parser->error = 1;
+                return;
+            }
+
+            DeleteToken(parser->token_list, i);
+            DeleteToken(new_parser->token_list, new_parser->token_list->len-1); // 删除Eof
+
+            int tmp_len = new_parser->token_list->len;
+            parser->token_list = InsertList(parser->token_list, new_parser->token_list, i);
+
+            // 由于删除了原token列表的一个元素，因此减一 理解
+            i--;
+            i += tmp_len;
+            free(new_parser);
+            continue;
+        }
+
+        if (token->type == DEFINE) {
+            DeleteToken(parser->token_list, i); // 直接删除处理
+            i--;
+            continue;
+        }
+
+        if (token->type == Annotation) {
+            DeleteToken(parser->token_list, i); // 直接删除处理
+            i--;
+            continue;
+        }
+    }
+}
+
+
+void formal_indent(int layer, FILE *out) {
+    for (int i = 0; i < layer; ++i) {
+        fprintf(out, "\t");
+    }
+}
+
+void format_display(Node *root, int layer, FILE *out) {
+    if (root == nullptr) return;
+
+    if (root->annotation_list != nullptr && root->annotation_list->len > 0) {
+        for (int i = 0; i < root->annotation_list->len; ++i) {
+            Token *token = TokenAt(root->annotation_list, i);
+            formal_indent(layer, out);
+            if (token->type == INCLUDE) {
+                fprintf(out, "#include \"%s\"\n", token->text);
+                continue;
+            }
+            if (token->type == DEFINE) {
+                fprintf(out, "#define %s", token->text);
+                continue;
+            }
+            fprintf(out, "%s", token->text);
+        }
+//        fprintf(out, "\n");
+    }
+
+//    formal_indent(layer, out);
+
+    switch (root->type) {
+
+        case NoType:
+            break;
+
+        case Program:
+            format_display(root->children[0], layer, out);
+            break;
+
+        case ExtDef:
+            break;
+
+        case ExtDefList:
+            format_display(root->children[0], layer, out);
+            fprintf(out, "\n");
+            format_display(root->children[1], layer, out);
+            break;
+
+        case ExtVarDef:
+            format_display(root->children[0], layer, out);
+            format_display(root->children[1], layer, out);
+            break;
+
+        case FuncDef:
+            format_display(root->children[0], layer, out);
+            format_display(root->children[1], layer, out);
+            fprintf(out, "(");
+            format_display(root->children[2], layer, out);
+            fprintf(out, ")");
+            if (root->children[3] == nullptr) {
+                fprintf(out, ";");
+            } else {
+                format_display(root->children[3], layer, out);
+            }
+            break;
+
+        case DeclaratorList:
+            format_display(root->children[0], layer, out);
+            if (root->children[1] != nullptr) {
+                fprintf(out, ", ");
+                format_display(root->children[1], layer, out);
+            } else {
+                fprintf(out, ";");
+            }
+            break;
+
+        case FormalParaList:
+            format_display(root->children[0], layer, out);
+            if (root->children[1] != nullptr) {
+                fprintf(out, ", ");
+                format_display(root->children[1], layer, out);
+            }
+            break;
+
+        case FormalPara:
+            format_display(root->children[0], layer, out);
+            format_display(root->children[1], layer, out);
+            break;
+
+        case CompoundSentenceList:
+            format_display(root->children[0], layer, out);
+            if (root->children[1] != nullptr) {
+                fprintf(out, "\n");
+                format_display(root->children[1], layer, out);
+            }
+            break;
+
+        case LocalVarDef:
+            formal_indent(layer, out);
+            format_display(root->children[0], layer, out);
+            format_display(root->children[1], layer, out);
+            break;
+
+        case WhileStatement:
+            formal_indent(layer, out);
+            fprintf(out, "while ");
+            fprintf(out, "(");
+            format_display(root->children[0], layer, out);
+            fprintf(out, ")");
+            format_display(root->children[1], layer, out);
+            break;
+        case BreakStatement:
+            formal_indent(layer, out);
+            fprintf(out, "break;");
+            break;
+        case ContinueStatement:
+            formal_indent(layer, out);
+            fprintf(out, "continue;");
+            break;
+        case ForStatement:
+            formal_indent(layer, out);
+            fprintf(out, "for");
+            fprintf(out, "( ");
+            format_display(root->children[0], layer, out);
+            fprintf(out, "; ");
+            format_display(root->children[1], layer, out);
+            fprintf(out, "; ");
+            format_display(root->children[2], layer, out);
+            fprintf(out, " )");
+            format_display(root->children[3], layer, out);
+            break;
+
+        case SingleExpStatement:
+            formal_indent(layer, out);
+            format_display(root->children[0], layer, out);
+            fprintf(out, ";");
+            break;
+
+        case ReturnStatement:
+            formal_indent(layer, out);
+            fprintf(out, "return ");
+            format_display(root->children[0], layer, out);
+            fprintf(out, ";");
+            break;
+
+        case IfStatement:
+            formal_indent(layer, out);
+            fprintf(out, "if ");
+            fprintf(out, "(");
+            format_display(root->children[0], layer, out);
+            fprintf(out, ")");
+            if (root->children[1]->type == CurlyBraces) {
+                format_display(root->children[1], layer, out);
+            } else {
+                fprintf(out, "\n");
+                format_display(root->children[1], layer + 1, out);
+            }
+            break;
+
+        case IfElseStatement:
+            formal_indent(layer, out);
+            fprintf(out, "if ");
+            fprintf(out, "(");
+            format_display(root->children[0], layer, out);
+            fprintf(out, ")");
+            if (root->children[1]->type == CurlyBraces) {
+                format_display(root->children[1], layer, out);
+                fprintf(out, "else");
+            } else {
+                fprintf(out, "\n");
+                format_display(root->children[1], layer + 1, out);
+                fprintf(out, "\n");
+                formal_indent(layer, out);
+                fprintf(out, "else");
+            }
+
+            if (root->children[2]->type == CurlyBraces) {
+                format_display(root->children[2], layer, out);
+            } else {
+                fprintf(out, "\n");
+                format_display(root->children[2], layer + 1, out);
+            }
+            break;
+
+        case CurlyBraces:
+            fprintf(out, " {\n ");
+            format_display(root->children[0], layer + 1, out);
+            fprintf(out, " \n");
+            formal_indent(layer, out);
+            fprintf(out, "} ");
+            break;
+
+        case Parentheses:
+            fprintf(out, "(");
+            format_display(root->children[0], layer, out);
+            fprintf(out, ")");
+            break;
+
+        case ArrayDeclarator:
+            format_display(root->children[0], layer, out);
+            fprintf(out, "[");
+            format_display(root->children[1], layer, out);
+            fprintf(out, "]");
+            break;
+
+        case ArrayCall:
+            format_display(root->children[0], layer, out);
+            fprintf(out, "[");
+            format_display(root->children[1], layer, out);
+            fprintf(out, "]");
+            break;
+
+        case FunctionCall:
+            format_display(root->children[0], layer, out);
+            fprintf(out, "(");
+            format_display(root->children[1], layer, out);
+            fprintf(out, ")");
+            break;
+
+        case Expression:
+            format_display(root->children[0], layer, out);
+            break;
+
+        case ArgumentsList:
+            format_display(root->children[0], layer, out);
+            if (root->children[1] != nullptr) {
+                fprintf(out, ", ");
+                format_display(root->children[1], layer, out);
+            }
+            break;
+
+        case TokenType:
+            // 中序遍历
+            format_display(root->children[0], layer, out);
+
+            if (root->token->type == Identifier || isConstant(root->token->type))
+            {
+                if (root->token->type == CHAR_CONST){
+                    fprintf(out, "\'%s\'", root->token->text);
+                }else {
+                    fprintf(out, "%s", root->token->text);
+                }
+            }
+
+            else fprintf(out, "%s", ToString(root->token->type));
+
+            format_display(root->children[1], layer, out);
+            break;
+
+    }
+}
+
+
+void Format(Parser *parser, char *filename) {
+    if (parser->root == nullptr) return;
+
+    // 语法树已经成功建立
+    // format 不应预处理
+
+    FILE *out = fopen(filename, "w");
+    if (out == nullptr) return;
+
+    format_display(parser->root, 0, out);
+
+}
+
+void ReleaseParser(Parser *parser) {
+    ReleaseTokenList(parser->token_list);
+    free(parser);
 }
