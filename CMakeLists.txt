@@ -4,4 +4,4 @@ project(syntaxFrontEnd)
 set(CMAKE_CXX_STANDARD 11)
 
 
-add_executable(refactor refactor/lexical_re.cpp refactor/lexical_re.hpp refactor/main_re.cpp refactor/node_re.hpp refactor/node_re.cpp refactor/parser_re.cpp refactor/parser_re.hpp)
+add_executable(syntax src/main.cpp src/node.hpp src/node.cpp src/parser.cpp src/parser.hpp src/lexical.hpp src/lexical.cpp src/token.cpp src/token.hpp src/tokenlist.cpp src/tokenlist.hpp)

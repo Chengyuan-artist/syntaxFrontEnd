@@ -3,8 +3,8 @@
 //
 
 
-#include "lexical_re.hpp"
-#include "node_re.hpp"
+#include "lexical.hpp"
+#include "node.hpp"
 
 
 #ifndef SYNTAXFRONTEND_PARSER_HPP

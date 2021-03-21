@@ -2,7 +2,7 @@
 // Created by 张承元 on 2021/3/8.
 //
 
-#include "node_re.hpp"
+#include "node.hpp"
 
 char node_type_string[40][30] = {
         "NoType", "Program","ExtDef", "ExtDefList","ExtVarDef","FuncDef", "DeclaratorList", "FormalParaList", "FormalPara",

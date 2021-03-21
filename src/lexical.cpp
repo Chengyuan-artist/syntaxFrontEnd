@@ -1,22 +1,8 @@
 //
-// Created by 张承元 on 2021/3/8.
+// Created by 张承元 on 2021/3/17.
 //
-#include "lexical_re.hpp"
+#include "lexical.hpp"
 
-
-char token_type_string[50][30] = {
-        "ERROR_TOKEN", "Identifier", "INT_CONST", "LONG_CONST", "FLOAT_CONST", "CHAR_CONST",
-        "int ", "long ", "float ", "double ", "char ", "if", "else", "while", "for", "return", "break",
-        "continue",
-        "[", "]", "{", "}", ";", ",",
-        " = ", "(", ")", " && ", " || ", " + ", " - ", " * ", " / ", " % ", " == ", " != ", " < ", " <= ", " > ", " >= ",
-        "Begin_Op",
-        "Eof", "#include", "#define","Annotation"
-};
-
-char *ToString(enum TokenType type){
-    return token_type_string[type];
-};
 
 #define keyword_num 12
 char keyword[20][10] = {"int", "long", "float", "double", "char", "if", "else", "while", "for", "return", "break",
@@ -31,6 +17,7 @@ int is_Ox(char ch) {
     return 0;
 }
 
+
 TokenType check_keyword() {
     // 查找表查找关键字 否则返回 IDENT
     for (int i = 0; i < keyword_num; ++i) {
@@ -39,6 +26,7 @@ TokenType check_keyword() {
     }
     return Identifier;
 }
+
 
 TokenType const_suffix(char ch) {
     if (ch == 'l' || ch == 'L') {
@@ -289,7 +277,6 @@ TokenType gettoken(FILE *fp) {
             return PLUS;
         case '-':
             return MINUS;
-            // TODO 负数处理
         case '*':
             return MULTIPLY;
         case '/':
@@ -419,112 +406,3 @@ TokenType gettoken(FILE *fp) {
     }
     return ERROR_TOKEN;
 }
-
-Token *NextToken(TokenList *list) {
-    (list->then_p)++;
-    return CurrentToken(list);
-}
-
-Token *CurrentToken(TokenList *list) {
-    return TokenAt(list, 0);
-}
-
-void AddToken(TokenList *token_list, Token *token) {
-    if (token_list->len >= token_list->store_size) {
-        token_list->store_size += Add_TokenList_Length;
-
-        token_list->val = (Token **) realloc(token_list->val,
-                                             sizeof(Token *) * (token_list->store_size));
-    }
-    token_list->val[token_list->len++] = token;
-}
-
-TokenList *getTokenList() {
-    TokenList *token_list = (TokenList *) malloc(sizeof(TokenList));
-    token_list->val = (Token **) malloc(sizeof(Token *) * Init_TokenList_Length);
-    token_list->len = 0;
-    token_list->store_size = Init_TokenList_Length;
-    token_list->then_p = 0;
-    return token_list;
-}
-
-Token *TokenAt(TokenList *list, int index){
-    int now_p = list->then_p + index;
-    if (now_p < 0 || now_p >= list->len){
-        return nullptr;
-    }
-    return (list->val)[now_p];
-}
-
-Token *GetToken() {
-    Token *token = (Token *) malloc(sizeof(Token));
-    memset(token, 0, sizeof(Token));
-    return token;
-}
-
-int isConstant(enum TokenType type) {
-    if (type == INT_CONST ||
-        type == FLOAT_CONST ||
-        type == CHAR_CONST ||
-        type == LONG_CONST) {
-        return 1;
-    }
-    return 0;
-}
-
-TokenList *InsertList(TokenList *target_list, TokenList *insert_list, int insert_pos) {
-
-    if (insert_pos >= target_list->len) insert_pos = target_list->len;
-
-    TokenList *new_list = getTokenList();
-
-    for (int i = 0; i < insert_pos; ++i) {
-        AddToken(new_list, TokenAt(target_list, i));
-    }
-    for (int i = 0; i < insert_list->len; ++i) {
-        AddToken(new_list, TokenAt(insert_list, i));
-    }
-    for (int i = insert_pos; i < target_list->len; ++i) {
-        AddToken(new_list, TokenAt(target_list, i));
-    }
-
-    // 假删除
-    DeleteTokenList(target_list);
-    DeleteTokenList(insert_list);
-
-    return new_list;
-}
-
-int DeleteToken(TokenList *list, int delete_pos) {
-    if (delete_pos< 0 || delete_pos >= list->len) {
-        return 0;
-    }
-    list->len--;
-    // really release the token
-    // 防止内存泄漏
-    Token *token = TokenAt(list, delete_pos);
-    free(token);
-    for (int i = delete_pos; i < list->len; ++i) {
-        list->val[i] = list->val[i+1];
-    }
-    return 1;
-}
-
-int DeleteTokenList(TokenList *list) {
-    if (list == nullptr) return 0;
-    free(list->val);
-    free(list);
-    return 1;
-}
-
-int ReleaseTokenList(TokenList *list) {
-    if (list == nullptr) return 0;
-    Token *token;
-    for (int i = 0; i < list->len; ++i) {
-        token = TokenAt(list, i);
-        free(token);
-    }
-    DeleteTokenList(list);
-    return 1;
-}
-

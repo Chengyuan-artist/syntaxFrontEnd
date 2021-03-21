@@ -2,7 +2,7 @@
 // Created by 张承元 on 2021/3/8.
 //
 
-#include "lexical_re.hpp"
+#include "lexical.hpp"
 
 #ifndef SYNTAXFRONTEND_NODE_RE_HPP
 #define SYNTAXFRONTEND_NODE_RE_HPP

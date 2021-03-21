@@ -3,7 +3,7 @@
 //
 
 
-#include "parser_re.hpp"
+#include "parser.hpp"
 
 #define REPORT_ERROR_AND_RETURN parser->error = 1;return nullptr;
 #define CHECK_ERROR if(parser->error)return nullptr;
@@ -137,6 +137,8 @@ Node *extDefList(Parser *parser) {
 
     AddChild(root, extDef(parser));
 
+    CHECK_ERROR
+
     AddChild(root, extDefList(parser));
     return root;
 }
@@ -175,7 +177,7 @@ Node *extDef(Parser *parser) {
         root = funcDef(parser);
     } else root = extVarDef(parser);
 
-    root->annotation_list = annotation_list;
+    if (root != nullptr)root->annotation_list = annotation_list;
 
     return root;
 }
@@ -208,8 +210,11 @@ Node *funcDef(Parser *parser) {
     AddChild(root, func_name);
 
     NextToken(parser->token_list);
+    // 消耗掉括号
+
     AddChild(root, formalParaList(parser));
 
+    CHECK_ERROR
 
     Token *token = NextToken(parser->token_list);
 
@@ -332,6 +337,8 @@ Node *formalParaList(Parser *parser) {
     Node *root = GetNode(FormalParaList);
 
     AddChild(root, formalPara(parser));
+
+    CHECK_ERROR
 
     token = NextToken(parser->token_list);
     if (token->type == COMMA) {
@@ -1144,13 +1151,13 @@ void format_display(Node *root, int layer, FILE *out) {
         case ForStatement:
             formal_indent(layer, out);
             fprintf(out, "for");
-            fprintf(out, "( ");
+            fprintf(out, "(");
             format_display(root->children[0], layer, out);
             fprintf(out, "; ");
             format_display(root->children[1], layer, out);
             fprintf(out, "; ");
             format_display(root->children[2], layer, out);
-            fprintf(out, " )");
+            fprintf(out, ")");
             format_display(root->children[3], layer, out);
             break;
 
