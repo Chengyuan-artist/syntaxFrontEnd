@@ -1,0 +1,171 @@
+\documentclass{ctexrep}
+\usepackage[margin=25mm]{geometry}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{cite}
+%\usepackage[linesnumbered,boxed]{algorithm2e}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+
+\ctexset { section = { format={\Large \bfseries } } }
+
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+
+\pagestyle{fancy}
+\chead{华中科技大学计算机科学与技术学院课程设计报告}
+
+
+
+\begin{titlepage}
+    \title{Syntax FrontEnd Design}
+    \author{Chengyuan ZHANG}
+    \date{March 2021}
+\end{titlepage}
+
+
+\begin{document}
+\maketitle
+
+\chapter*{任\;务\;书}
+\addcontentsline{toc}{section}{任务书}
+\section*{设计内容}
+
+在计算机科学中，抽象语法树\textit{(abstract syntax tree或者缩写为AST)}，是将源代码的语法结构的用树的形式表示，树上的每个结点都表示源程序代码中的一种语法成分。之所以说是“抽象”，是因为在抽象语法树中，忽略了源程序中语法成分的一些细节，突出了其主要语法特征。
+抽象语法树\textit{(Abstract Syntax Tree ,AST)}作为程序的一种中间表示形式,在程序分析等诸多领域有广泛的应用.利用抽象语法树可以方便地实现多种源程序处理工具,比如源程序浏览器、智能编辑器、语言翻译器等。
+
+在《高级语言源程序格式处理工具》这个题目中，首先需要采用形式化的方式，使用巴克斯\textit{(BNF)}范式定义高级语言的词法规则\textit{(字符组成单词的规则)}、语法规则\textit{(单词组成语句、程序等的规则)}。再利用形式语言自动机的的原理，对源程序的文件进行词法分析，识别出所有单词；使用编译技术中的递归下降语法分析法，分析源程序的语法结构，并生成抽象语法树,最后可由抽象语法树生成格式化的源程序。\cite{b1}\cite{b2}
+
+
+\section*{设计要求}
+\begin{enumerate}
+    \item 语言定义
+    
+    选定C语言的一个子集，要求包含：
+
+    \begin{enumerate}[label={(\arabic*)}]
+        \item 基本数据类型的变量、常量，以及数组。不包含指针、结构，枚举等。
+        \item 双目算术运算符（+\;-\;*\;/\;\%），关系运算符、逻辑与、逻辑或、赋值运算符。不包含逗号运算符、位运算符、各种单目运算符等等。
+        \item 函数定义、声明与调用。
+        \item 表达式语句、复合语句、if语句的2种形式、while语句、for语句，return语句、break语句、continue语句、外部变量说明语句、局部变量说明语句。
+        \item 编译预处理（宏定义，文件包含）
+        \item 注释（块注释与行注释）
+    \end{enumerate}
+    \item 单词识别
+    
+    设计DFA的状态转换图（参见实验指导），实验时给出DFA，并解释如何在状态迁移中完成单词识别（每个单词都有一个种类编号和单词的字符串这2个特征值），最终生成单词识别（词法分析）子程序。
+
+    注：含后缀常量，以类型不同作为划分标准种类编码值，例如123类型为int，123L类型为long，单词识别时，种类编码应该不同；但0x123和123类型都是int，种类编码应该相同。
+    \item 语法结构分析
+    \begin{enumerate}[label={(\arabic*)}]
+        \item 外部变量的声明；
+        \item 函数声明与定义；
+        \item 局部变量的声明；
+        \item 语句及表达式；
+        \item 生成（1)-(4)（包含编译预处理和注释）的抽象语法树并显示。
+    \end{enumerate}
+    \item 按缩进编排生成源程序文件。
+    \item 评测说明
+ 
+    要求具有如下功能:
+    \begin{enumerate}[label={(\arabic*)}]
+        \item \textbf{识别语言的全部单词（50\%）:}
+        
+        要求测试用例包含所有种类的单词，测试用例中没有出现的单词种类视作没有完成该类单词的识别。由于每类单词有一个种类编码（参见实验指导书用枚举常量定义），可以将识别出来的单词按种类编码进行排序显示，这样既能方便自己的调试，也能方便检查。注意相同种类编码的多种形式，都应该包含在测试用例中，例如类型为int的常量，有三种形式0123、123、0x123。
+        
+        报错功能，指出不符合单词定义的符号位置。
+
+        \item \textbf{语法结构分析与生成抽象语法树（40\%）:}
+        
+        要求测试用例包含函数声明，定义、表达式（各种运算符均在某个表达式中出现）、所有的语句，以及if语句的嵌套，循环语句的嵌套。测试用例中没有出现的语句和嵌套结构，视作没有完成该种语法结构的分析。
+        
+        报错功能，指出不符合语法规则的错误位置。测试文件中不必包含错误语句等，检查时由老师随机修改测试文件，设置错误，检查报错功能是否实现。
+
+        显示抽象语法树，要求能由抽象语法树说明源程序的语法结构，这也是检查时验证语法结构分析正确性的依据。
+        \item \textbf{缩进编排重新生成源程序文件（10\%）:}
+        
+        对（2）的测试用例生成的抽象语法树进行先根遍历，按缩进编排的方式写到.c文件中，查看文件验证是否满足任务要求。
+
+    \end{enumerate}
+
+\end{enumerate}
+
+
+
+
+\bibliographystyle{plain}
+
+\bibliography{TaskPageRef}    
+
+
+\tableofcontents
+
+
+\chapter{引言}
+\section{背景与研究意义}
+
+\section{国内外研究现状}
+\section{课程设计的主要研究工作}
+
+
+\chapter{系统需求分析与总体设计}
+\section{系统需求分析}
+\section{系统总体设计}
+
+
+\begin{lstlisting}[language=C]
+    #include<stdio.h>
+    int main(){
+    }
+\end{lstlisting}
+
+
+\chapter{系统详细设计}
+\section{有关数据结构的定义}
+\section{主要算法设计}
+
+
+\chapter{系统实现与测试}
+\section{系统实现}
+\section{系统测试}
+
+
+\chapter{结论}
+\section{讨论与总结}
+\section{未来展望}
+
+\chapter{心得体会}
+
+
+
+  
+
+
+\end{document}

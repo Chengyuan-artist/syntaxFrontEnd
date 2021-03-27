@@ -13,6 +13,7 @@ int main(){
 
 //    DisplayAllToken(parser);
 
+
     Parsing(parser);
 
     Format(parser, "out.c");
